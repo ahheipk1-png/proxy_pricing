@@ -1,28 +1,59 @@
 # Proxy Pricing
 
-Small research prototype for regression-based option pricing proxies.
+Small research prototype for Monte Carlo-trained option-pricing proxies.
 
-The current script builds a Stage 1 proxy for European option values under
-geometric Brownian motion. It simulates risk-neutral paths, fits polynomial
-least-squares proxies at each time point, and compares the fitted proxy against
-Black-Scholes values on representative spot grids.
+The current parent-level entry points are:
+
+```powershell
+python EuroMain.py
+python AsianMain.py
+```
+
+`EuroMain.py` runs only the current European option default:
+
+```text
+tail-biased shifted MC labels
+log(option value) target
+Chebyshev regression in d1
+degree 7
+no asymptotic proxy
+```
+
+It is standalone and does not import the exploratory modules under
+`EuroOptExperiment/`.
+
+`AsianMain.py` runs only the current Asian option default:
+
+```text
+monthly arithmetic Asian call
+12 observations over 1 year
+adjusted-moneyness state transform
+log(value / spot) and log(time value / spot) targets
+Chebyshev degree 19
+shifted antithetic MC labels
+geometric Asian control variate for benchmark
+```
+
+It is standalone and does not import the exploratory modules under
+`AsianOptExperiment/`.
+
+All exploratory European and Asian option scripts, plots, CSVs, and notes are
+stored in:
+
+```text
+EuroOptExperiment/
+AsianOptExperiment/
+```
+
+The default runs write:
+
+```text
+EuroOptExperiment/default_run/euro_default_results.csv
+AsianOptExperiment/default_run/asian_default_results.csv
+```
 
 ## Setup
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
-
-## Run
-
-```powershell
-python stage1_lsmc_european.py
-```
-
-## Current Scope
-
-- Exact GBM path simulation under the risk-neutral measure
-- European call/put payoff support
-- Polynomial basis regression with an additional payoff basis term
-- Black-Scholes validation table and fitted coefficient output
-
