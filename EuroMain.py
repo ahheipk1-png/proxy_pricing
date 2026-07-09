@@ -5,7 +5,6 @@ from pathlib import Path
 from statistics import NormalDist
 
 import numpy as np
-from numpy.polynomial.chebyshev import chebvander
 
 
 @dataclass(frozen=True)
@@ -20,8 +19,8 @@ class Params:
     option_type: str = "call"
 
 
-METHOD_NAME = "log Chebyshev"
-METHOD_DETAIL = "d1, degree=7"
+METHOD_NAME = "log PCHIP"
+METHOD_DETAIL = "d1 coordinate, shape-preserving cubic Hermite interpolation"
 STATE_POINTS = 121
 MC_PATHS_PER_STATE = 25_000
 GRID_POINTS = 501
@@ -142,26 +141,62 @@ def shifted_mc_value(spot, tau, params, rng):
     )
 
 
-def weighted_ridge(design, target, ridge=1e-8):
-    penalty = np.eye(design.shape[1]) * ridge
-    penalty[0, 0] = 0.0
-    return np.linalg.solve(design.T @ design + penalty, design.T @ target)
+def pchip_slopes(x, y):
+    if len(x) == 2:
+        secant = (y[1] - y[0]) / (x[1] - x[0])
+        return np.array([secant, secant])
+    h = np.diff(x)
+    delta = np.diff(y) / h
+    slopes = np.zeros_like(y)
+    same_sign = delta[:-1] * delta[1:] > 0.0
+    w1 = 2.0 * h[1:] + h[:-1]
+    w2 = h[1:] + 2.0 * h[:-1]
+    denominator = (
+        w1 / np.where(delta[:-1] == 0.0, 1.0, delta[:-1])
+        + w2 / np.where(delta[1:] == 0.0, 1.0, delta[1:])
+    )
+    interior = np.zeros_like(denominator)
+    np.divide(
+        w1 + w2,
+        denominator,
+        out=interior,
+        where=np.abs(denominator) > 1e-14,
+    )
+    slopes[1:-1] = np.where(same_sign, interior, 0.0)
+    slopes[0] = ((2.0 * h[0] + h[1]) * delta[0] - h[0] * delta[1]) / (
+        h[0] + h[1]
+    )
+    slopes[-1] = (
+        (2.0 * h[-1] + h[-2]) * delta[-1] - h[-1] * delta[-2]
+    ) / (h[-1] + h[-2])
+    for index, secant in ((0, delta[0]), (-1, delta[-1])):
+        if slopes[index] * secant <= 0.0:
+            slopes[index] = 0.0
+        elif abs(slopes[index]) > 3.0 * abs(secant):
+            slopes[index] = 3.0 * secant
+    return slopes
 
 
-def fit_log_chebyshev_d1(spot, values, tau, params, degree=7):
+def fit_log_pchip_d1(spot, values, tau, params):
     x = d1_from_spot(spot, tau, params)
-    x_min = float(x.min())
-    x_max = float(x.max())
-
-    def scale(new_x):
-        return np.clip(2.0 * (new_x - x_min) / (x_max - x_min) - 1.0, -1.0, 1.0)
-
+    order = np.argsort(x)
+    x = x[order]
     target = np.log(np.maximum(values, 0.0) + 1e-10)
-    coeffs = weighted_ridge(chebvander(scale(x), degree), target)
+    target = target[order]
+    slopes = pchip_slopes(x, target)
 
     def predict(new_spot):
         new_x = d1_from_spot(new_spot, tau, params)
-        return np.exp(chebvander(scale(new_x), degree) @ coeffs) - 1e-10
+        index = np.clip(np.searchsorted(x, new_x) - 1, 0, len(x) - 2)
+        h = x[index + 1] - x[index]
+        t = np.clip((new_x - x[index]) / h, 0.0, 1.0)
+        fitted = (
+            (2.0 * t**3 - 3.0 * t**2 + 1.0) * target[index]
+            + (t**3 - 2.0 * t**2 + t) * h * slopes[index]
+            + (-2.0 * t**3 + 3.0 * t**2) * target[index + 1]
+            + (t**3 - t**2) * h * slopes[index + 1]
+        )
+        return np.maximum(np.exp(np.clip(fitted, -30.0, 20.0)) - 1e-10, 0.0)
 
     return predict
 
@@ -189,7 +224,7 @@ def run_time_slice(params, time_fraction, rng):
     else:
         state_spot = delta_space_spot_grid(tau, params, STATE_POINTS)
         state_value = shifted_mc_value(state_spot, tau, params, rng)
-        proxy = fit_log_chebyshev_d1(state_spot, state_value, tau, params)
+        proxy = fit_log_pchip_d1(state_spot, state_value, tau, params)
         prediction = proxy(grid_spot)
 
     return {

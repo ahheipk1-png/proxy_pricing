@@ -33,7 +33,7 @@ So the best proxy is almost one-dimensional after the adjusted-moneyness
 transformation. This was much better than fitting a generic 2D surface in
 `(spot, running average)`.
 
-## Best Current Method
+## Universal One-Dimensional Default
 
 The current default Asian method is:
 
@@ -48,7 +48,7 @@ benchmark labels:          500,000 paths per validation state
 benchmark variance cut:    geometric Asian control variate
 target 1:                  log(value / spot)
 target 2:                  log(time value / spot)
-default fitter:            Chebyshev degree 19 for both targets
+default fitter:            PCHIP for both one-dimensional targets
 ITM switch:                use linear baseline + time value once
                            linear baseline > 5% of spot
 diagnostic metric:         abs(proxy - benchmark) / max(benchmark, 0.01)
@@ -62,7 +62,20 @@ shifted antithetic MC
 + exact discrete geometric Asian control variate
 ```
 
-## Monthly 12-Fixing Results
+The independent standalone PCHIP run produced:
+
+| Day Index | Remaining Fixings | Max % Error | P99 % Error | MAE |
+|---:|---:|---:|---:|---:|
+| 0 | 11 | 0.057% | 0.056% | 0.000763 |
+| 3 | 8 | 2.938% | 2.748% | 0.000618 |
+| 6 | 5 | 3.331% | 1.910% | 0.000642 |
+| 9 | 2 | 0.847% | 0.330% | 0.000031 |
+| 11 | 0 | 0.000% | 0.000% | 0.000000 |
+
+Akima remains the product-specific accuracy winner in the 1D bakeoff, but PCHIP
+is used as the universal default shared with European and American options.
+
+## Historical Chebyshev Experiment
 
 The best method was the adjusted-moneyness hybrid.
 

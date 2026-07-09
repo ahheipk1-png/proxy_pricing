@@ -5,7 +5,6 @@ from pathlib import Path
 from statistics import NormalDist
 
 import numpy as np
-from numpy.polynomial.chebyshev import chebvander
 
 
 @dataclass(frozen=True)
@@ -21,8 +20,8 @@ class Params:
     option_type: str = "call"
 
 
-METHOD_NAME = "adjusted-moneyness hybrid"
-METHOD_DETAIL = "monthly Asian, log value degree=19, log time-value degree=19"
+METHOD_NAME = "adjusted-moneyness PCHIP hybrid"
+METHOD_DETAIL = "monthly Asian, log value and log time-value PCHIP curves"
 TEST_DAY_INDICES = [0, 3, 6, 9, 11]
 ADJUSTED_MONEYNESS_POINTS = 121
 VALIDATION_SPOT_POINTS = 9
@@ -30,10 +29,7 @@ VALIDATION_AVG_POINTS = 7
 TRAIN_SCENARIOS_PER_FIT = 10_000_000
 BENCHMARK_PATHS_PER_STATE = 500_000
 SIMULATION_BATCH_PATHS = 100_000
-HYBRID_VALUE_DEGREE = 19
-HYBRID_TIME_VALUE_DEGREE = 19
 HYBRID_INTRINSIC_SWITCH = 0.05
-RIDGE = 1e-8
 LOG_EPS = 1e-12
 RELATIVE_ERROR_FLOOR = 0.01
 SHIFT_BUFFER = 0.5
@@ -352,26 +348,61 @@ def build_labels(spots, running_sums, day_index, params, rng, n_paths):
     return values, stderrs
 
 
-def scale_to_unit(values):
-    values = np.asarray(values, dtype=float)
-    lower = float(values.min())
-    upper = float(values.max())
-    if upper <= lower + 1e-12:
-        return np.zeros_like(values), lower, upper
-    return 2.0 * (values - lower) / (upper - lower) - 1.0, lower, upper
+def fit_pchip_curve(x, y):
+    order = np.argsort(x)
+    x = np.asarray(x, dtype=float)[order]
+    y = np.asarray(y, dtype=float)[order]
+    x, unique_index = np.unique(x, return_index=True)
+    y = y[unique_index]
+    if len(x) == 1:
+        return lambda new_x: np.full_like(np.asarray(new_x), y[0], dtype=float)
 
+    h = np.diff(x)
+    delta = np.diff(y) / h
+    slopes = np.zeros_like(y)
+    if len(x) == 2:
+        slopes[:] = delta[0]
+    else:
+        same_sign = delta[:-1] * delta[1:] > 0.0
+        w1 = 2.0 * h[1:] + h[:-1]
+        w2 = h[1:] + 2.0 * h[:-1]
+        denominator = (
+            w1 / np.where(delta[:-1] == 0.0, 1.0, delta[:-1])
+            + w2 / np.where(delta[1:] == 0.0, 1.0, delta[1:])
+        )
+        interior = np.zeros_like(denominator)
+        np.divide(
+            w1 + w2,
+            denominator,
+            out=interior,
+            where=np.abs(denominator) > 1e-14,
+        )
+        slopes[1:-1] = np.where(same_sign, interior, 0.0)
+        slopes[0] = (
+            (2.0 * h[0] + h[1]) * delta[0] - h[0] * delta[1]
+        ) / (h[0] + h[1])
+        slopes[-1] = (
+            (2.0 * h[-1] + h[-2]) * delta[-1] - h[-1] * delta[-2]
+        ) / (h[-1] + h[-2])
+        for index, secant in ((0, delta[0]), (-1, delta[-1])):
+            if slopes[index] * secant <= 0.0:
+                slopes[index] = 0.0
+            elif abs(slopes[index]) > 3.0 * abs(secant):
+                slopes[index] = 3.0 * secant
 
-def apply_scale(values, lower, upper):
-    values = np.asarray(values, dtype=float)
-    if upper <= lower + 1e-12:
-        return np.zeros_like(values)
-    return np.clip(2.0 * (values - lower) / (upper - lower) - 1.0, -1.0, 1.0)
+    def predict(new_x):
+        new_x = np.asarray(new_x, dtype=float)
+        index = np.clip(np.searchsorted(x, new_x) - 1, 0, len(x) - 2)
+        local_h = x[index + 1] - x[index]
+        t = np.clip((new_x - x[index]) / local_h, 0.0, 1.0)
+        return (
+            (2.0 * t**3 - 3.0 * t**2 + 1.0) * y[index]
+            + (t**3 - 2.0 * t**2 + t) * local_h * slopes[index]
+            + (-2.0 * t**3 + 3.0 * t**2) * y[index + 1]
+            + (t**3 - t**2) * local_h * slopes[index + 1]
+        )
 
-
-def ridge_solve(design, target):
-    penalty = np.eye(design.shape[1]) * RIDGE
-    penalty[0, 0] = 0.0
-    return np.linalg.solve(design.T @ design + penalty, design.T @ target)
+    return predict
 
 
 def fit_adjusted_hybrid_proxy(spots, running_sums, values, day_index, params):
@@ -386,8 +417,6 @@ def fit_adjusted_hybrid_proxy(spots, running_sums, values, day_index, params):
     x = adjusted_moneyness_coordinate(
         spots[train_mask], running_sums[train_mask], day_index, params
     )
-    x_scaled, x_low, x_high = scale_to_unit(x)
-
     base = np.maximum(
         linear_values(spots[train_mask], running_sums[train_mask], day_index, params),
         0.0,
@@ -397,13 +426,11 @@ def fit_adjusted_hybrid_proxy(spots, running_sums, values, day_index, params):
         (values[train_mask] - base) / spots[train_mask], 0.0
     )
 
-    value_coeffs = ridge_solve(
-        chebvander(x_scaled, HYBRID_VALUE_DEGREE),
-        np.log(normalized_value + LOG_EPS),
+    value_curve = fit_pchip_curve(
+        x, np.log(normalized_value + LOG_EPS)
     )
-    time_coeffs = ridge_solve(
-        chebvander(x_scaled, HYBRID_TIME_VALUE_DEGREE),
-        np.log(normalized_time_value + LOG_EPS),
+    time_curve = fit_pchip_curve(
+        x, np.log(normalized_time_value + LOG_EPS)
     )
 
     def predict(new_spots, new_running_sums):
@@ -424,22 +451,18 @@ def fit_adjusted_hybrid_proxy(spots, running_sums, values, day_index, params):
         )
 
         fitted = ~linear_tail
-        new_x = apply_scale(
-            adjusted_moneyness_coordinate(
-                new_spots[fitted], new_running_sums[fitted], day_index, params
-            ),
-            x_low,
-            x_high,
+        new_x = adjusted_moneyness_coordinate(
+            new_spots[fitted], new_running_sums[fitted], day_index, params
         )
         base_value = np.maximum(
             linear_values(new_spots[fitted], new_running_sums[fitted], day_index, params),
             0.0,
         )
         value_proxy = new_spots[fitted] * (
-            np.exp(chebvander(new_x, HYBRID_VALUE_DEGREE) @ value_coeffs) - LOG_EPS
+            np.exp(np.clip(value_curve(new_x), -30.0, 20.0)) - LOG_EPS
         )
         time_value_proxy = base_value + new_spots[fitted] * (
-            np.exp(chebvander(new_x, HYBRID_TIME_VALUE_DEGREE) @ time_coeffs) - LOG_EPS
+            np.exp(np.clip(time_curve(new_x), -30.0, 20.0)) - LOG_EPS
         )
         use_time_value = (base_value / np.maximum(new_spots[fitted], 1e-12)) > (
             HYBRID_INTRINSIC_SWITCH

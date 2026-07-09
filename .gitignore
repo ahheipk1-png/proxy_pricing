@@ -1,5 +1,7 @@
 __pycache__/
 *.py[cod]
+tmp/
+OneDimensionalFitExperiment/results/quick/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -7,4 +9,3 @@ __pycache__/
 venv/
 env/
 .env
-

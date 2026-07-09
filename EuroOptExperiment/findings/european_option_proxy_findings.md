@@ -28,7 +28,26 @@ fit log(value), not raw value
 validate max relative error on a holdout grid
 ```
 
-## Best Current Method
+## Universal One-Dimensional Default
+
+The standalone default was changed to log-PCHIP on the same `d1` coordinate so
+European, Asian, and American one-dimensional proxies share one shape-preserving
+fitting engine. With an independent default seed it produced:
+
+| Time | Max % Error | P99 % Error | MAE |
+|---:|---:|---:|---:|
+| 0.20 | 1.375% | 0.932% | 0.013603 |
+| 0.40 | 2.637% | 1.577% | 0.011506 |
+| 0.60 | 1.379% | 1.251% | 0.007895 |
+| 0.80 | 2.080% | 1.671% | 0.005021 |
+| 1.00 | 0.000% | 0.000% | 0.000000 |
+
+The historical Chebyshev and Bernstein experiments remain more accurate for
+this globally smooth product. PCHIP is the default because it provides one
+local, monotonicity-preserving method across all genuinely one-dimensional
+products.
+
+## Best Product-Specific Method
 
 The best practical method for this European test was:
 
@@ -38,7 +57,8 @@ MC labels:         shifted / importance-sampled MC
 paths per state:   25,000
 target:            log(option value)
 fitters tested:    polynomial, Chebyshev, B-spline, LOESS, PCHIP, Fourier
-default fitter:    log Chebyshev in d1 coordinate, degree 7
+universal fitter:  log PCHIP in d1 coordinate
+optimized fitter:  log Chebyshev or Bernstein ridge
 diagnostic metric: abs(proxy - truth) / max(truth, 0.01)
 ```
 
