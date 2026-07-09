@@ -136,6 +136,22 @@ styles.add(
         spaceAfter=10,
     )
 )
+styles.add(
+    ParagraphStyle(
+        name="TheoremCustom",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=9.0,
+        leading=12.8,
+        textColor=colors.HexColor("#20262D"),
+        borderColor=colors.HexColor("#9BB7CC"),
+        borderWidth=0.7,
+        borderPadding=7,
+        backColor=colors.HexColor("#F3F7FA"),
+        spaceBefore=5,
+        spaceAfter=6,
+    )
+)
 
 
 def p(text, style="BodyCustom"):
@@ -152,6 +168,14 @@ def h2(text):
 
 def eq(text):
     return Preformatted(text.strip(), styles["CodeCustom"])
+
+
+def theorem(title, text):
+    return p(f"<b>Theorem ({title}).</b> {text}", "TheoremCustom")
+
+
+def proof(text):
+    return p(f"<b>Proof.</b> {text}")
 
 
 def table(data, widths=None, header=True, font_size=7.6):
@@ -214,6 +238,10 @@ story.extend(
             "SLV cliquet, and three-underlying basket cliquet instruments",
             styles["Subtitle"],
         ),
+        Paragraph(
+            "Written for a second-year undergraduate with calculus, probability, and linear algebra",
+            styles["Subtitle"],
+        ),
         Spacer(1, 0.25 * inch),
         p(
             "This guide derives the transformations, estimators, regression bases, "
@@ -258,6 +286,28 @@ story.extend(
             "remaining geometry. A one-dimensional curve and a seven-dimensional SLV "
             "surface should not be forced into the same numerical representation."
         ),
+        h2("How to read this guide"),
+        p(
+            "The main chapters explain the ideas operationally: what is being priced, what "
+            "state is needed, how Monte Carlo labels are generated, and how the proxy is "
+            "fitted. Proofs are postponed to the appendices so that the pricing workflow "
+            "remains visible. Every theorem used by the implementation is restated there "
+            "with assumptions, a proof or proof sketch, and its role in the code."
+        ),
+        h2("Minimal prerequisites and notation"),
+        table(
+            [
+                ["Symbol", "Meaning"],
+                ["S_t", "Underlying asset price at time t"],
+                ["r, q, sigma", "Interest rate, dividend yield, volatility"],
+                ["E[. | X_t=x]", "Conditional expected value given today's state"],
+                ["V(t,x)", "True model price; V_hat(t,x) is its proxy"],
+                ["N", "Number of Monte Carlo paths"],
+                ["SE", "Estimated Monte Carlo standard error"],
+                ["clip(u,L,U)", "min(max(u,L),U)"],
+            ],
+            widths=[1.6 * inch, 5.2 * inch],
+        ),
         h2("Contents"),
         table(
             [
@@ -269,6 +319,7 @@ story.extend(
                 ["V", "Single-name cliquet and SLV extensions"],
                 ["VI", "Three-underlying SLV basket cliquet"],
                 ["VII", "Generic high-dimensional workflow and validation checklist"],
+                ["Appendices", "Theorem statements, proofs, and references"],
             ],
             widths=[0.7 * inch, 6.1 * inch],
         ),
@@ -343,6 +394,38 @@ v_next = max(v + kappa(theta-v_plus) dt
             "This preserves positivity numerically but introduces discretization bias. "
             "Proxy error is measured against a benchmark using the same grid, so Euler "
             "bias is outside the reported proxy metric."
+        ),
+        PageBreak(),
+        h2("2.4 Universal pricing-label workflow"),
+        p(
+            "For every instrument, the expensive training label is constructed before any "
+            "proxy is fitted. At state x_i and valuation date t, the reusable sequence is:"
+        ),
+        table(
+            [
+                ["Step", "Pricing action", "Output"],
+                ["1", "Reconstruct the sufficient Markov state", "x_i"],
+                ["2", "Simulate risk-neutral transitions or paths", "X^(j)"],
+                ["3", "Evaluate path payoff and discount", "Y_i^(j)"],
+                ["4", "Apply unbiased controls or likelihood ratios", "Y_tilde_i^(j)"],
+                ["5", "Average paths and estimate sampling error", "V_i and SE_i"],
+                ["6", "Repeat on independent validation states", "Benchmark surface"],
+            ],
+            widths=[0.55 * inch, 4.1 * inch, 2.1 * inch],
+        ),
+        eq(
+            """
+Training label:
+V_i = (1/N_i) Sum_(j=1)^N_i Y_tilde_i^(j)
+
+Estimated label variance:
+Var(V_i) = sample_var(Y_tilde_i) / N_i.
+"""
+        ),
+        p(
+            "A proxy approximates the conditional expectation represented by these labels; "
+            "it does not replace the risk-neutral pricing definition. Exact payoff regions "
+            "are evaluated analytically and removed from the regression whenever possible."
         ),
         PageBreak(),
     ]
@@ -501,6 +584,74 @@ Proxy: y_hat(x)=Sum_(k=0)^d beta_k T_k(x).
             "Chebyshev polynomials are better conditioned on [-1,1] than monomials and "
             "work well for globally smooth value functions."
         ),
+        PageBreak(),
+        h2("5.3.1 Tensor basis and sparse multi-index set"),
+        p(
+            "For scaled state z=(z_1,...,z_D), a multivariate tensor Chebyshev term is"
+        ),
+        eq(
+            """
+Psi_alpha(z) = Product_(j=1)^D T_(alpha_j)(z_j),
+alpha = (alpha_1,...,alpha_D), alpha_j >= 0.
+
+Full tensor degree p: 0 <= alpha_j <= p
+Number of terms: (p+1)^D.
+"""
+        ),
+        p(
+            "The full tensor is impossible in seven dimensions. Sparse regression keeps "
+            "only a payoff-aware index set. A standard anisotropic form is"
+        ),
+        eq(
+            """
+I_p = { alpha : Sum_j w_j alpha_j <= p },
+
+where small w_j permits higher degree in an important coordinate and large w_j
+suppresses degree in a weak coordinate.
+"""
+        ),
+        h2("5.3.2 Basket cliquet sparse basis"),
+        p(
+            "The basket implementation gives the lower and upper payoff cushions the "
+            "largest degree because they locate the global floor and cap transitions. "
+            "The six spot/variance coordinates enter through lower-order interactions:"
+        ),
+        eq(
+            """
+1. T_a(lower cushion),                 a=0,...,15
+2. T_b(upper cushion),                 b=1,...,8
+3. T_a(lower) T_b(upper),              a+b<9
+4. T_a(lower) state_j,                 a=0,...,5
+5. T_b(upper) state_j,                 b=0,...,3
+6. state_j state_k,                    j<k.
+"""
+        ),
+        p(
+            "This is not a generic total-degree polynomial. It encodes the belief that "
+            "payoff-boundary location is strongly nonlinear, while residual SLV state "
+            "dependence is smoother and lower order."
+        ),
+        h2("5.3.3 Sparse Chebyshev training algorithm"),
+        eq(
+            """
+Input: states x_i, MC values V_i, known bounds L<U.
+
+1. Scale each feature to z_ij in [-1,1].
+2. Transform p_i=clip((V_i-L)/(U-L),eps,1-eps).
+3. Set y_i=log(p_i/(1-p_i)).
+4. Build A_(i,k)=Psi_(alpha_k)(z_i) for selected terms.
+5. Solve (A'A + lambda Gamma) beta = A'y.
+6. At query x, evaluate y_hat=Psi(x)' beta.
+7. Return V_hat=L+(U-L)/(1+exp(-y_hat)).
+8. Override exact floor, cap, or maturity states.
+"""
+        ),
+        p(
+            "With M retained terms and N labels, evaluation is O(M) per state. Normal-"
+            "equation training is approximately O(N M^2 + M^3), but it is convex, "
+            "deterministic, and normally much cheaper than path generation."
+        ),
+        PageBreak(),
         h2("5.4 Bernstein and global Bezier basis"),
         eq(
             """
@@ -561,6 +712,53 @@ w1=2h_i+h_(i-1), w2=h_i+2h_(i-1).
         p(
             "This suppresses overshoot and preserves monotonicity. It is especially useful "
             "for American continuation curves near an exercise boundary."
+        ),
+        PageBreak(),
+        h2("6.2.1 Endpoint slopes and limiting"),
+        p(
+            "Interior slopes use information on both sides. At the left endpoint only the "
+            "first two secants are available, so PCHIP first forms a one-sided estimate:"
+        ),
+        eq(
+            """
+d_0_raw = [(2h_0+h_1) delta_0 - h_0 delta_1] / (h_0+h_1).
+"""
+        ),
+        p(
+            "Then it applies two safety rules. If d_0_raw has the wrong sign relative to "
+            "delta_0, set d_0=0. If its magnitude exceeds 3|delta_0|, set "
+            "d_0=3 delta_0. The right endpoint uses the reflected formula."
+        ),
+        h2("6.2.2 Why the harmonic mean is shape preserving"),
+        p(
+            "Suppose two neighboring secants are positive. Their weighted harmonic mean "
+            "is also positive and cannot exceed the larger secant by an arbitrary amount. "
+            "If the secants disagree in sign, the data have a local turning point; setting "
+            "the derivative to zero prevents the cubic from inventing an extra turn. The "
+            "formal monotonicity conditions and proof are given in Appendix F."
+        ),
+        h2("6.2.3 PCHIP implementation recipe"),
+        eq(
+            """
+Build once:
+1. Sort pairs (x_i,y_i) and remove duplicate x_i.
+2. Compute h_i=x_(i+1)-x_i and delta_i=(y_(i+1)-y_i)/h_i.
+3. Compute interior d_i with the sign test and harmonic mean.
+4. Compute and limit the two endpoint slopes.
+
+Evaluate at x:
+5. Find i such that x_i <= x <= x_(i+1).
+6. Set t=(x-x_i)/h_i.
+7. Evaluate the four cubic Hermite basis functions.
+8. Return H_i(t), then invert any log or logit target transform.
+9. Override exact payoff, floor, cap, or exercise regions.
+"""
+        ),
+        p(
+            "Building the curve costs O(n). With binary search, each query costs O(log n); "
+            "on an ordered query grid the interval index can be advanced in O(1) amortized "
+            "time. PCHIP interpolates every label, so it must be paired with low-noise MC "
+            "labels; it is a shape-preserving interpolator, not a denoising method."
         ),
         h2("6.3 Akima slope rule"),
         eq(
@@ -1172,6 +1370,109 @@ story.extend(
 
 story.extend(
     [
+        h1("15A. Instrument-by-instrument proxy recipes"),
+        p(
+            "Each row below is a reproducible recipe. The state is what must be known at "
+            "the valuation date; the label column describes the expensive price calculation; "
+            "the transform and fitter define the cheap proxy."
+        ),
+        table(
+            [
+                ["Instrument", "State / coordinate", "Training label", "Target and fitter"],
+                [
+                    "European",
+                    "Spot S; transform to d1",
+                    "Shifted antithetic terminal GBM payoff",
+                    "log(V+eps), PCHIP",
+                ],
+                [
+                    "Asian",
+                    "(S,A); reduce to adjusted moneyness",
+                    "Path MC + geometric-Asian control",
+                    "log(V/S) and log(time/S), PCHIP",
+                ],
+                [
+                    "American",
+                    "Spot S at each exercise date",
+                    "One-step MC conditional continuation",
+                    "Raw continuation PCHIP; max with intrinsic",
+                ],
+                [
+                    "Barrier",
+                    "Spot S plus alive/hit flag",
+                    "Antithetic MC + bridge survival weight",
+                    "log(V+eps), PCHIP",
+                ],
+            ],
+            widths=[1.0 * inch, 1.75 * inch, 2.2 * inch, 1.85 * inch],
+            font_size=6.9,
+        ),
+        h2("Recipe details: European"),
+        bullet("Choose a valuation date and compute remaining maturity tau."),
+        bullet("Generate spot nodes uniformly in d1 so both delta wings are covered."),
+        bullet("At each node, importance-shift terminal normals toward the strike."),
+        bullet("Fit log price with PCHIP; use the payoff exactly at maturity."),
+        bullet("Validate against Black-Scholes on a denser shifted grid."),
+        h2("Recipe details: arithmetic Asian"),
+        bullet("Store spot S and running sum A before today's fixing."),
+        bullet("Derive K_adj=(N K-A-S)/m and the scalar adjusted-moneyness coordinate."),
+        bullet("Use antithetics, likelihood shifting, and the exact geometric Asian control."),
+        bullet("Fit normalized value and time value; use the exact linear wing."),
+        bullet("Validate with 500,000 independent paths per state."),
+        PageBreak(),
+        h1("15B. Exercise, barrier, and cliquet recipes"),
+        h2("Recipe details: American put"),
+        bullet("Start from the terminal payoff and move backward through exercise dates."),
+        bullet("Simulate one-step transitions at 121 spot nodes."),
+        bullet("Average the discounted next-date proxy to estimate continuation."),
+        bullet("Fit continuation with PCHIP, then impose V=max(intrinsic, continuation)."),
+        bullet("Validate against an independent projected finite-difference solution."),
+        h2("Recipe details: barrier call"),
+        bullet("Condition on whether the barrier has already been hit."),
+        bullet("For discrete monitoring, check simulated prices only at monitoring dates."),
+        bullet("For continuous monitoring, multiply exact segment bridge-survival weights."),
+        bullet("Fit the alive-state log price in spot; obtain zero-rebate knock-in by parity."),
+        h2("Recipe details: cliquet family"),
+        table(
+            [
+                ["Instrument", "State", "Variance reduction", "Proxy"],
+                [
+                    "GBM cliquet",
+                    "Accrued clipped return",
+                    "Antithetic + clipped-sum control",
+                    "Bounded logit Chebyshev d19",
+                ],
+                [
+                    "Single SLV",
+                    "Accrued, spot, variance",
+                    "Antithetic + lower-tail shift",
+                    "Local / anisotropic Chebyshev",
+                ],
+                [
+                    "3-asset SLV",
+                    "Accrued, 3 spots, 3 variances",
+                    "Antithetic + mixture shift",
+                    "Sparse bounded Chebyshev",
+                ],
+            ],
+            widths=[1.3 * inch, 1.75 * inch, 2.0 * inch, 1.75 * inch],
+            font_size=7.0,
+        ),
+        bullet("Compute exact global-floor and global-cap states before fitting."),
+        bullet("Transform the remaining bounded price to logit space."),
+        bullet("Concentrate states around floor/cap transition regions."),
+        bullet("For the 7D basket, validate on multiple independent state-space designs."),
+        p(
+            "The 7D basket is the only family that did not reliably meet the 5-8% maximum-"
+            "error goal. The documented default is the strongest fixed baseline, not a "
+            "claim that the dimensionality problem has been solved."
+        ),
+        PageBreak(),
+    ]
+)
+
+story.extend(
+    [
         h1("16. Why there is no universal fitter"),
         p(
             "PCHIP works well for the American continuation curve because the geometry is "
@@ -1352,14 +1653,486 @@ story.extend(
             "wings and transition regions.",
             "Callout",
         ),
-        Spacer(1, 0.2 * inch),
         p(
-            "End of methodology guide.",
+            "The remaining pages are theorem statements, proofs, and references. They are "
+            "not required to run the code, but they explain why each step is mathematically "
+            "valid.",
             "Subtitle",
         ),
+        PageBreak(),
     ]
 )
 
+# Theorem and proof appendices
+story.extend(
+    [
+        h1("Appendix A. Probability and Monte Carlo theorems"),
+        p(
+            "The theorem statements below are restated in the notation of this project; "
+            "they are not verbatim quotations. Each statement lists the assumptions used "
+            "by the implementation."
+        ),
+        h2("A.1 Sample mean and standard error"),
+        theorem(
+            "Law of Large Numbers and Central Limit Theorem",
+            "Let Y_1,Y_2,... be independent, identically distributed path values with "
+            "finite mean mu and finite nonzero variance s^2. Then the sample mean converges "
+            "to mu in probability. Moreover, sqrt(N)(Y_bar-mu)/s converges in distribution "
+            "to a standard normal random variable.",
+        ),
+        proof(
+            "The weak law follows from Var(Y_bar)=s^2/N and Chebyshev's inequality: "
+            "P(|Y_bar-mu|>a) <= s^2/(N a^2), which tends to zero. The central-limit "
+            "statement follows by expanding the characteristic function of the centered, "
+            "standardized variable near zero and raising it to the Nth power. Replacing s "
+            "by the sample standard deviation is valid because that estimator is consistent."
+        ),
+        h2("A.2 Conditioning and variance reduction"),
+        theorem(
+            "Tower Property and Rao-Blackwell Variance Identity",
+            "For square-integrable Y and information G, E[E[Y|G]]=E[Y] and "
+            "Var(Y)=E[Var(Y|G)]+Var(E[Y|G]). Therefore Var(E[Y|G])<=Var(Y).",
+        ),
+        proof(
+            "The defining property of conditional expectation gives the first identity "
+            "by choosing the whole sample space as the event. Write "
+            "Y-E[Y]=(Y-E[Y|G])+(E[Y|G]-E[Y]). The cross term has expectation zero after "
+            "conditioning on G, so expanding the square gives the variance identity. "
+            "Brownian-bridge survival weighting uses exactly this idea."
+        ),
+        h2("A.3 Control variates"),
+        theorem(
+            "Optimal Linear Control",
+            "Let Y be the discounted target payoff and C a control with known mean m_C and "
+            "positive variance. The estimator Y_beta=Y-beta(C-m_C) is unbiased for every "
+            "beta. Its variance is minimized by beta*=Cov(Y,C)/Var(C).",
+        ),
+        proof(
+            "Unbiasedness follows because E[C-m_C]=0. Expanding the variance gives "
+            "Var(Y_beta)=Var(Y)+beta^2 Var(C)-2 beta Cov(Y,C), a convex quadratic. "
+            "Differentiating and setting the derivative to zero gives beta*."
+        ),
+        h2("A.4 Gaussian likelihood-ratio shift"),
+        theorem(
+            "Normal Mean Shift",
+            "If Z is sampled from N(theta,1), then for any integrable payoff f, "
+            "E_N(0,1)[f(Z)]=E_N(theta,1)[f(Z) exp(-theta Z+theta^2/2)].",
+        ),
+        proof(
+            "Divide the standard-normal density phi(z) by the shifted density "
+            "phi(z-theta). Completing the square gives their ratio "
+            "exp(-theta z+theta^2/2). Multiplying the shifted integral by this ratio "
+            "recovers the original integral exactly. The multistep formula multiplies "
+            "these ratios, which adds their log likelihoods."
+        ),
+        h2("A.5 Antithetic unbiasedness"),
+        theorem(
+            "Antithetic Pairing",
+            "If Z and -Z have the same distribution, then [f(Z)+f(-Z)]/2 has the same "
+            "expectation as f(Z). Its variance is no greater than plain two-path averaging "
+            "when Cov(f(Z),f(-Z))<=0.",
+        ),
+        proof(
+            "Symmetry gives E[f(-Z)]=E[f(Z)]. The paired variance is one half of "
+            "Var(f(Z)) plus one half of the covariance term, so a nonpositive covariance "
+            "cannot increase variance."
+        ),
+        PageBreak(),
+    ]
+)
+
+story.extend(
+    [
+        h1("Appendix B. Risk-neutral pricing and GBM"),
+        h2("B.1 Risk-neutral pricing theorem"),
+        theorem(
+            "Risk-Neutral Valuation",
+            "In an arbitrage-free complete market with money-market numeraire B_t, there "
+            "is a unique probability measure Q under which every traded discounted price "
+            "S_t/B_t is a martingale. A replicable payoff H at T has value "
+            "V_t=B_t E_Q[H/B_T | F_t].",
+        ),
+        proof(
+            "A self-financing replicating portfolio has discounted value equal to a "
+            "Q-martingale, so its current value is the conditional expectation of its "
+            "discounted terminal value. At T that terminal value equals H. If the option "
+            "had a different price, buying the cheaper claim and selling the dearer "
+            "replicating strategy would create an arbitrage. Existence and uniqueness of Q "
+            "are the finite-market content of the fundamental theorem of asset pricing."
+        ),
+        h2("B.2 Ito's lemma"),
+        theorem(
+            "Ito's Lemma, One Dimension",
+            "If X_t satisfies dX_t=a(t,X_t)dt+b(t,X_t)dW_t and f has one continuous time "
+            "derivative and two continuous space derivatives, then "
+            "df=(f_t+a f_x+0.5 b^2 f_xx)dt+b f_x dW_t.",
+        ),
+        proof(
+            "Use a second-order Taylor expansion over a short interval. Brownian increments "
+            "have size sqrt(dt), so (dW)^2 contributes at order dt, while dt*dW and dt^2 "
+            "are smaller. The quadratic variation identity (dW)^2=dt produces the "
+            "extra 0.5 b^2 f_xx term. A rigorous proof takes limits in probability over "
+            "partitions; that measure-theory step is beyond the assumed prerequisites."
+        ),
+        h2("B.3 Exact GBM solution"),
+        theorem(
+            "Geometric Brownian Motion",
+            "If dS/S=(r-q)dt+sigma dW with constant coefficients, then over tau, "
+            "S_T=S_t exp[(r-q-sigma^2/2)tau+sigma sqrt(tau)Z], Z~N(0,1).",
+        ),
+        proof(
+            "Apply Ito's lemma to f(S)=log S. Since f'=1/S and f''=-1/S^2, "
+            "d log S=(r-q-sigma^2/2)dt+sigma dW. Integrate from t to T and use "
+            "W_T-W_t=sqrt(tau)Z, then exponentiate."
+        ),
+        h2("B.4 Black-Scholes call formula"),
+        theorem(
+            "Black-Scholes-Merton Call",
+            "Under the GBM assumptions above, a European call has value "
+            "C=S exp(-q tau)Phi(d1)-K exp(-r tau)Phi(d2), where "
+            "d1=[log(S/K)+(r-q+sigma^2/2)tau]/(sigma sqrt(tau)) and "
+            "d2=d1-sigma sqrt(tau).",
+        ),
+        proof(
+            "Risk-neutral pricing gives exp(-r tau)E[(S_T-K)+]. Split the expectation into "
+            "E[S_T 1_(S_T>K)]-K P(S_T>K). The lognormal threshold is Z>-d2, giving "
+            "P=Phi(d2). Completing the square inside the first normal integral shifts the "
+            "threshold by sigma sqrt(tau), giving E[S_T 1]=S exp((r-q)tau)Phi(d1). "
+            "Discounting produces the formula."
+        ),
+        PageBreak(),
+    ]
+)
+
+story.extend(
+    [
+        h1("Appendix C. Path-dependent identities and barriers"),
+        h2("C.1 Asian homogeneity reduction"),
+        theorem(
+            "GBM Asian State Reduction",
+            "At a fixed fixing date with m future fixings, define "
+            "K_adj=(N K-A-S)/m. Under GBM, the arithmetic Asian call value satisfies "
+            "V(S,A)=S times a function only of K_adj/S and time.",
+        ),
+        proof(
+            "Future spots can be written S G_k, where the joint growth factors G_k do not "
+            "depend on S. The payoff equals (m/N)[S average(G)-K_adj]+. Pulling S>0 "
+            "outside the positive part gives S(m/N)[average(G)-K_adj/S]+. Taking the "
+            "discounted expectation leaves a scalar function of K_adj/S."
+        ),
+        h2("C.2 Lognormal geometric Asian control"),
+        theorem(
+            "Weighted Normal Sum",
+            "Any fixed linear combination of jointly normal variables is normal. Therefore "
+            "the log of a discrete geometric average of GBM fixings is normal.",
+        ),
+        proof(
+            "Each future log spot is an affine function of Gaussian increments. Their "
+            "average is another affine combination of the same increments, hence normal "
+            "by the defining closure property of multivariate normal vectors. Exponentiating "
+            "makes the geometric average lognormal, so its option value is available in "
+            "Black-Scholes form."
+        ),
+        h2("C.3 In/out parity"),
+        theorem(
+            "Zero-Rebate Barrier Parity",
+            "For identical strike, maturity, barrier, and monitoring, a zero-rebate "
+            "knock-in plus the corresponding knock-out equals the vanilla option path by "
+            "path. Hence V_in+V_out=V_vanilla.",
+        ),
+        proof(
+            "Every path is in exactly one of two disjoint events: the barrier is hit or it "
+            "is not. On a hit path only the knock-in pays the vanilla payoff; on a no-hit "
+            "path only the knock-out pays it. Add the two path payoffs and then take the "
+            "discounted expectation."
+        ),
+        h2("C.4 Brownian-bridge survival"),
+        theorem(
+            "Single Lower-Barrier Bridge",
+            "Let a Brownian bridge with variance rate sigma^2 start at x>b and end at y>b "
+            "after dt. Its probability of staying above b is "
+            "1-exp[-2(x-b)(y-b)/(sigma^2 dt)].",
+        ),
+        proof(
+            "For Brownian motion starting at x, the reflection principle maps every path "
+            "that first hits b and ends at y>b to a path ending at the reflected point "
+            "2b-y. The ratio of the reflected Gaussian transition density to the direct "
+            "density is exp[-2(x-b)(y-b)/(sigma^2 dt)]. Conditioning on the endpoint "
+            "turns this ratio into the crossing probability; subtract from one."
+        ),
+        h2("C.5 Double-barrier image expansion"),
+        theorem(
+            "Absorbing Interval Kernel",
+            "For Brownian motion killed at lower a and upper c, the transition density "
+            "inside (a,c) equals an alternating infinite sum of free Gaussian densities "
+            "at repeatedly reflected image points. Dividing this density by the free "
+            "transition density gives conditional double-barrier survival.",
+        ),
+        proof(
+            "Reflect the endpoint across a to enforce zero density at the lower boundary, "
+            "then repeat reflections every 2(c-a) to enforce the upper boundary as well. "
+            "At either boundary the direct and reflected terms cancel pairwise. Each term "
+            "solves the heat equation, and the sum has the correct initial mass; uniqueness "
+            "of the absorbing heat-equation solution identifies the kernel. The code "
+            "truncates the rapidly decaying image sum and clips roundoff to [0,1]."
+        ),
+        PageBreak(),
+    ]
+)
+
+story.extend(
+    [
+        h1("Appendix D. American exercise and exact payoff bounds"),
+        h2("D.1 Bellman recursion"),
+        theorem(
+            "Finite-Horizon Optimal Stopping",
+            "For exercise dates k=0,...,M and discounted reward g_k, define "
+            "V_M=g_M and V_k=max(g_k, E[V_(k+1)|F_k]). Then V_k is the largest value "
+            "obtainable by any stopping rule from date k, and the first date where "
+            "g_k>=E[V_(k+1)|F_k] is optimal.",
+        ),
+        proof(
+            "Use backward induction. At the last date, stopping is the only action. Assume "
+            "V_(k+1) is optimal from the next date. At k there are only two choices: stop "
+            "for g_k, or continue and receive conditional expected value E[V_(k+1)|F_k]. "
+            "Taking their maximum is therefore optimal. Induction proves the result at all "
+            "dates. This is the discrete Snell-envelope construction."
+        ),
+        h2("D.2 Cliquet floor and cap tails"),
+        theorem(
+            "Bound Propagation",
+            "If m coupons remain and every coupon lies in [l,u], then final accumulated "
+            "return lies in [a+m l,a+m u]. If this whole interval is below the global "
+            "floor or above the global cap, the discounted payoff is known exactly.",
+        ),
+        proof(
+            "Adding m quantities each between l and u adds between m l and m u. If the "
+            "largest possible final return is below the floor, clipping always returns "
+            "the floor. If the smallest possible final return is above the cap, clipping "
+            "always returns the cap. No simulation is needed in either region."
+        ),
+        h2("D.3 Positive semidefinite factor construction"),
+        theorem(
+            "Factor-Generated Covariance",
+            "If epsilon has identity covariance and Z=A epsilon, then Cov(Z)=A A' is "
+            "positive semidefinite.",
+        ),
+        proof(
+            "For every vector c, c'Cov(Z)c=c'A A'c=|A'c|^2>=0. The basket SLV shock "
+            "construction is a linear factor model of this form, so it cannot create an "
+            "invalid negative-variance direction."
+        ),
+        PageBreak(),
+    ]
+)
+
+story.extend(
+    [
+        h1("Appendix E. Regression and sparse Chebyshev proofs"),
+        h2("E.1 Ridge regression solution"),
+        theorem(
+            "Ridge Normal Equation",
+            "For objective J(beta)=|A beta-y|^2+lambda|Gamma beta|^2, every minimizer "
+            "satisfies (A'A+lambda Gamma'Gamma)beta=A'y. If that matrix is positive "
+            "definite, the minimizer is unique.",
+        ),
+        proof(
+            "Differentiate the quadratic: grad J=2A'(A beta-y)+2lambda Gamma'Gamma beta. "
+            "Setting it to zero gives the equation. The Hessian is twice the coefficient "
+            "matrix. Positive definiteness makes J strictly convex, so its stationary "
+            "point is the unique global minimizer."
+        ),
+        h2("E.2 Chebyshev recurrence and boundedness"),
+        theorem(
+            "Chebyshev Cosine Identity",
+            "For x=cos(theta), T_n(x)=cos(n theta). Consequently |T_n(x)|<=1 on [-1,1] "
+            "and T_(n+1)=2x T_n-T_(n-1).",
+        ),
+        proof(
+            "The cosine addition identity gives "
+            "cos((n+1)theta)=2cos(theta)cos(n theta)-cos((n-1)theta), proving the "
+            "recurrence. The bound follows because an ordinary cosine lies in [-1,1]. "
+            "This bounded basis is numerically safer than powers x^n on a wide raw domain."
+        ),
+        h2("E.3 Curse of the full tensor"),
+        theorem(
+            "Tensor Term Count",
+            "If each of D coordinates may use degrees 0 through p independently, the full "
+            "tensor polynomial basis contains (p+1)^D terms.",
+        ),
+        proof(
+            "There are p+1 choices for each coordinate degree alpha_j. The multiplication "
+            "principle gives (p+1) multiplied by itself D times. For D=7 and p=5 this is "
+            "6^7=279,936 terms before any regression is solved."
+        ),
+        h2("E.4 Sparse anisotropic index sets"),
+        theorem(
+            "Downward-Closed Sparse Set",
+            "If I={alpha: Sum_j w_j alpha_j<=p} with positive weights, then alpha in I and "
+            "0<=beta_j<=alpha_j imply beta in I.",
+        ),
+        proof(
+            "Because all weights are positive, Sum_j w_j beta_j<=Sum_j w_j alpha_j<=p. "
+            "Thus lower-order parent terms are retained whenever a higher-order term is "
+            "retained, which makes the sparse hierarchy interpretable."
+        ),
+        PageBreak(),
+    ]
+)
+
+story.extend(
+    [
+        h1("Appendix F. PCHIP and cubic interpolation theorems"),
+        h2("F.1 Unique cubic Hermite segment"),
+        theorem(
+            "Hermite Interpolation",
+            "Given two distinct endpoints, two endpoint values, and two endpoint slopes, "
+            "there is exactly one polynomial of degree at most three satisfying all four "
+            "conditions.",
+        ),
+        proof(
+            "The four Hermite basis functions displayed in Section 6 construct one such "
+            "polynomial. If two cubics satisfied the conditions, their difference would "
+            "have a double root at each endpoint, hence at least four roots counting "
+            "multiplicity. A nonzero cubic cannot have four roots, so the difference is zero."
+        ),
+        h2("F.2 Local PCHIP monotonicity"),
+        theorem(
+            "Fritsch-Carlson / Fritsch-Butland Monotone Cubic",
+            "For strictly ordered nodes with monotone data, choosing interior derivatives "
+            "by the sign test and weighted harmonic mean, together with the stated endpoint "
+            "limiters, produces a monotone piecewise cubic Hermite interpolant.",
+        ),
+        proof(
+            "On one interval, subtract y_i and divide by the nonzero secant so the endpoint "
+            "values become 0 and 1. The derivative of the Hermite cubic is then a quadratic "
+            "whose coefficients depend only on the two normalized endpoint slopes. "
+            "Substituting the harmonic-mean slopes and endpoint bounds places those "
+            "normalized slopes in the monotonicity region derived by Fritsch and Carlson, "
+            "so the quadratic is nonnegative on [0,1] for increasing data and nonpositive "
+            "for decreasing data. If adjacent secants change sign, the zero derivative "
+            "joins the two monotone pieces without an extra extremum. The original paper "
+            "contains the complete case-by-case quadratic inequalities."
+        ),
+        h2("F.3 Bezier and Hermite equivalence"),
+        theorem(
+            "Cubic Representation Equivalence",
+            "A cubic Bezier curve with control points P0=y_i, P1=y_i+h d_i/3, "
+            "P2=y_(i+1)-h d_(i+1)/3, P3=y_(i+1) is exactly the cubic Hermite segment "
+            "with endpoint values y_i,y_(i+1) and slopes d_i,d_(i+1).",
+        ),
+        proof(
+            "Expand the four Bernstein polynomials in powers of t and collect the "
+            "coefficients of y_i, h d_i, y_(i+1), and h d_(i+1). They are respectively "
+            "2t^3-3t^2+1, t^3-2t^2+t, -2t^3+3t^2, and t^3-t^2, exactly the Hermite basis."
+        ),
+        PageBreak(),
+    ]
+)
+
+story.extend(
+    [
+        h1("Appendix G. Bounded transforms and moment formulas"),
+        h2("G.1 Logit enforces price bounds"),
+        theorem(
+            "Logistic Bijection",
+            "The map logistic(y)=1/(1+exp(-y)) sends every real y into (0,1), is strictly "
+            "increasing, and has inverse log(p/(1-p)). Therefore "
+            "L+(U-L)logistic(y) always lies strictly between L and U.",
+        ),
+        proof(
+            "The exponential is positive, so the denominator exceeds one and the fraction "
+            "lies in (0,1). Differentiation gives logistic(y)[1-logistic(y)]>0. Solving "
+            "p=1/(1+exp(-y)) for y gives the stated inverse. Affine rescaling maps (0,1) "
+            "to (L,U)."
+        ),
+        h2("G.2 Expected clipped normal value"),
+        theorem(
+            "Clipped Normal Mean",
+            "If X~N(mu,s^2), then E[clip(X,L,U)]=L+C(L)-C(U), where "
+            "C(K)=(mu-K)Phi((mu-K)/s)+s phi((mu-K)/s).",
+        ),
+        proof(
+            "Pathwise, clip(X,L,U)=L+(X-L)+-(X-U)+. For a normal variable, substitute "
+            "X=mu+sZ in E[(X-K)+] and integrate over Z>(K-mu)/s. Splitting the integral "
+            "into (mu-K) times a tail probability plus s times the first normal tail "
+            "moment gives C(K)."
+        ),
+        h2("G.3 Common random numbers"),
+        theorem(
+            "Unbiased Common-Random-Number Labels",
+            "Using the same random draws to estimate prices at several states does not "
+            "change the expectation of any individual state estimator. It changes only "
+            "their cross-state covariance.",
+        ),
+        proof(
+            "At each fixed state, the reused random vector has exactly the same marginal "
+            "distribution as a freshly drawn vector, so its sample mean remains unbiased. "
+            "Sharing draws correlates errors across states; for nearby smooth payoffs this "
+            "usually makes the error itself vary smoothly, which helps interpolation."
+        ),
+        PageBreak(),
+    ]
+)
+
+story.extend(
+    [
+        h1("Appendix H. Primary references"),
+        p(
+            "These sources support the named theorems and numerical methods. The appendix "
+            "statements are project-specific restatements, not copied quotations."
+        ),
+        bullet(
+            "Black, F. and Scholes, M. (1973), The Pricing of Options and Corporate "
+            "Liabilities, Journal of Political Economy 81, 637-654. "
+            "https://doi.org/10.1086/260062"
+        ),
+        bullet(
+            "Fritsch, F. N. and Carlson, R. E. (1980), Monotone Piecewise Cubic "
+            "Interpolation, SIAM Journal on Numerical Analysis 17, 238-246. "
+            "https://doi.org/10.1137/0717021"
+        ),
+        bullet(
+            "Fritsch, F. N. and Butland, J. (1984), A Method for Constructing Local "
+            "Monotone Piecewise Cubic Interpolants, SIAM Journal on Scientific and "
+            "Statistical Computing 5, 300-304."
+        ),
+        bullet(
+            "Hoerl, A. E. and Kennard, R. W. (1970), Ridge Regression: Biased Estimation "
+            "for Nonorthogonal Problems, Technometrics 12, 55-67. "
+            "https://doi.org/10.1080/00401706.1970.10488634"
+        ),
+        bullet(
+            "Eilers, P. H. C. and Marx, B. D. (1996), Flexible Smoothing with B-splines "
+            "and Penalties, Statistical Science 11, 89-121. "
+            "https://doi.org/10.1214/ss/1038425655"
+        ),
+        bullet(
+            "Broadie, M., Glasserman, P., and Kou, S. G. (1997), A Continuity Correction "
+            "for Discrete Barrier Options, Mathematical Finance 7, 325-348."
+        ),
+        bullet(
+            "Glasserman, P. and Staum, J. (2001), Conditioning on One-Step Survival for "
+            "Barrier Option Simulations, Operations Research 49, 923-937. "
+            "https://doi.org/10.1287/opre.49.6.923.10018"
+        ),
+        bullet(
+            "Reinsch, C. H. (1967), Smoothing by Spline Functions, Numerische Mathematik "
+            "10, 177-183. https://doi.org/10.1007/BF02162161"
+        ),
+        bullet(
+            "Floater, M. S. and Hormann, K. (2007), Barycentric Rational Interpolation "
+            "with No Poles and High Rates of Approximation, Numerische Mathematik 107, "
+            "315-331. https://doi.org/10.1007/s00211-007-0093-y"
+        ),
+        p(
+            "Standard probability results (law of large numbers, central limit theorem, "
+            "conditional expectation, and normal-density change of measure) are proved "
+            "directly above in the finite-variance setting used by the simulations."
+        ),
+        PageBreak(),
+    ]
+)
 
 def build():
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)

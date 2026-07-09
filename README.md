@@ -139,6 +139,17 @@ The detailed mathematical and implementation guide is:
 output/pdf/proxy_pricing_methodology.pdf
 ```
 
+The guide is written for a second-year undergraduate with calculus,
+probability, and linear algebra. Its 42 pages include:
+
+```text
+risk-neutral pricing and Monte Carlo label construction
+step-by-step proxy recipes for every instrument
+complete PCHIP and sparse Chebyshev algorithms
+theorem statements, assumptions, proofs or proof sketches
+primary academic references
+```
+
 It can be regenerated with:
 
 ```powershell
