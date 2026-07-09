@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 from numpy.polynomial.chebyshev import chebvander
+from scipy.stats import norm, qmc
 
 
 @dataclass(frozen=True)
@@ -35,9 +36,9 @@ TEST_MONTHS = [0, 3, 6, 9, 12]
 TRAIN_STATES = 321
 VALIDATION_STATES = 41
 TRAIN_SCENARIOS_PER_FIT = 10_000_000
-BENCHMARK_PATHS_PER_STATE = 500_000
+BENCHMARK_PATHS_PER_STATE = 524_288
 STEPS_PER_PERIOD = 2
-BATCH_PATHS = 100_000
+BATCH_PATHS = 131_072
 SPOT_RANGE = (65.0, 150.0)
 VAR_RANGE = (0.01, 0.12)
 RELATIVE_ERROR_FLOOR = 0.01
@@ -56,6 +57,29 @@ def radical_inverse(index, base):
         value += digit * fraction
         fraction /= base
     return value
+
+
+def power_of_two_at_least(n):
+    return 1 << int(np.ceil(np.log2(max(int(n), 1))))
+
+
+def qmc_path_count(target_paths):
+    return 2 * power_of_two_at_least((int(target_paths) + 1) // 2)
+
+
+def sobol_antithetic_batches(target_paths, dimension, seed, max_batch):
+    half_total = power_of_two_at_least((int(target_paths) + 1) // 2)
+    half_batch = power_of_two_at_least(max(1, int(max_batch) // 2))
+    half_batch = min(half_batch, half_total)
+    engine = qmc.Sobol(d=dimension, scramble=True, seed=int(seed))
+    remaining = half_total
+    while remaining:
+        half = min(half_batch, remaining)
+        base = engine.random(half)
+        base = np.clip(base, 1e-12, 1.0 - 1e-12)
+        base = norm.ppf(base)
+        yield np.vstack((base, -base))
+        remaining -= half
 
 
 def remaining(month, params):
@@ -203,14 +227,13 @@ def simulate(accrued, spot0, variance0, month, params, rng, n_paths):
     )
     total = total_sq = 0.0
     count = 0
-    paths_left = int(n_paths)
-    while paths_left:
-        batch = min(paths_left, BATCH_PATHS)
-        half = (batch + 1) // 2
-        z1_half = rng.standard_normal((half, steps))
-        z2_half = rng.standard_normal((half, steps))
-        z1 = np.vstack((z1_half, -z1_half))[:batch]
-        z2 = importance_shift + np.vstack((z2_half, -z2_half))[:batch]
+    seed = rng.integers(0, np.iinfo(np.int64).max)
+    for base_normals in sobol_antithetic_batches(
+        n_paths, 2 * steps, seed, BATCH_PATHS
+    ):
+        batch = len(base_normals)
+        z1 = base_normals[:, :steps]
+        z2 = importance_shift + base_normals[:, steps:]
         likelihood = np.exp(
             -importance_shift * np.sum(z2, axis=1)
             + 0.5 * steps * importance_shift**2
@@ -249,7 +272,6 @@ def simulate(accrued, spot0, variance0, month, params, rng, n_paths):
         count += batch
         total += float(np.sum(value))
         total_sq += float(np.sum(value * value))
-        paths_left -= batch
     mean = total / count
     sample_var = max((total_sq - count * mean * mean) / max(count - 1, 1), 0.0)
     return mean, sqrt(sample_var / count)
@@ -257,6 +279,7 @@ def simulate(accrued, spot0, variance0, month, params, rng, n_paths):
 
 def labels(states, month, params, rng, paths):
     value, stderr = np.empty(len(states[0])), np.empty(len(states[0]))
+    common_seed = int(rng.integers(0, np.iinfo(np.int64).max))
     for row in range(len(value)):
         value[row], stderr[row] = simulate(
             states[0][row],
@@ -264,7 +287,7 @@ def labels(states, month, params, rng, paths):
             states[2][row],
             month,
             params,
-            rng,
+            np.random.default_rng(common_seed),
             paths,
         )
     return value, stderr
@@ -389,7 +412,7 @@ def main():
     params = Params()
     rng = np.random.default_rng(params.seed)
     rows = []
-    train_paths = int(np.ceil(TRAIN_SCENARIOS_PER_FIT / TRAIN_STATES))
+    train_paths = qmc_path_count(np.ceil(TRAIN_SCENARIOS_PER_FIT / TRAIN_STATES))
     for month in TEST_MONTHS:
         train_states = make_states(month, params, TRAIN_STATES)
         test_states = make_states(month, params, VALIDATION_STATES, validation=True)

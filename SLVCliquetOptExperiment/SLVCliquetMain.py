@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 from numpy.polynomial.chebyshev import chebvander
+from scipy.stats import norm, qmc
 
 try:
     from PIL import Image, ImageDraw
@@ -45,9 +46,9 @@ TEST_DAY_INDICES = [0, 3, 6, 9, 12]
 TRAIN_STATES = 321
 VALIDATION_STATES = 41
 TRAIN_SCENARIOS_PER_FIT = 10_000_000
-BENCHMARK_PATHS_PER_STATE = 500_000
+BENCHMARK_PATHS_PER_STATE = 524_288
 STEPS_PER_PERIOD = 2
-BATCH_PATHS = 100_000
+BATCH_PATHS = 131_072
 RELATIVE_ERROR_FLOOR = 0.01
 RIDGE = 3e-7
 LOGIT_EPS = 1e-7
@@ -70,6 +71,29 @@ def radical_inverse(index, base):
         value += digit * fraction
         fraction /= base
     return value
+
+
+def power_of_two_at_least(n):
+    return 1 << int(np.ceil(np.log2(max(int(n), 1))))
+
+
+def qmc_path_count(target_paths):
+    return 2 * power_of_two_at_least((int(target_paths) + 1) // 2)
+
+
+def sobol_antithetic_batches(target_paths, dimension, seed, max_batch):
+    half_total = power_of_two_at_least((int(target_paths) + 1) // 2)
+    half_batch = power_of_two_at_least(max(1, int(max_batch) // 2))
+    half_batch = min(half_batch, half_total)
+    engine = qmc.Sobol(d=dimension, scramble=True, seed=int(seed))
+    remaining = half_total
+    while remaining:
+        half = min(half_batch, remaining)
+        base = engine.random(half)
+        base = np.clip(base, 1e-12, 1.0 - 1e-12)
+        base = norm.ppf(base)
+        yield np.vstack((base, -base))
+        remaining -= half
 
 
 def remaining_periods(day_index, params):
@@ -217,7 +241,6 @@ def simulate_value(accrued, spot0, variance0, day_index, params, rng, n_paths):
     count = 0
     total = 0.0
     total_sq = 0.0
-    remaining = int(n_paths)
     rho_scale = sqrt(1.0 - params.rho**2)
     coupon_mean, _ = frozen_coupon_moments(
         np.array([spot0]), np.array([variance0]), params, draws=1001
@@ -243,13 +266,13 @@ def simulate_value(accrued, spot0, variance0, day_index, params, rng, n_paths):
         else 0.0
     )
 
-    while remaining:
-        batch = min(remaining, BATCH_PATHS)
-        half = (batch + 1) // 2
-        z1 = rng.standard_normal((half, n_steps))
-        z2 = rng.standard_normal((half, n_steps))
-        z1 = np.vstack((z1, -z1))[:batch]
-        z2 = importance_shift + np.vstack((z2, -z2))[:batch]
+    seed = rng.integers(0, np.iinfo(np.int64).max)
+    for base_normals in sobol_antithetic_batches(
+        n_paths, 2 * n_steps, seed, BATCH_PATHS
+    ):
+        batch = len(base_normals)
+        z1 = base_normals[:, :n_steps]
+        z2 = importance_shift + base_normals[:, n_steps:]
         likelihood = np.exp(
             -importance_shift * np.sum(z2, axis=1)
             + 0.5 * n_steps * importance_shift**2
@@ -286,7 +309,6 @@ def simulate_value(accrued, spot0, variance0, day_index, params, rng, n_paths):
         count += batch
         total += float(np.sum(values))
         total_sq += float(np.sum(values * values))
-        remaining -= batch
 
     mean = total / count
     variance_of_values = max(
@@ -578,7 +600,7 @@ def run():
         validation_states = make_states(
             day_index, params, VALIDATION_STATES, validation=True
         )
-        train_paths = int(np.ceil(TRAIN_SCENARIOS_PER_FIT / TRAIN_STATES))
+        train_paths = qmc_path_count(np.ceil(TRAIN_SCENARIOS_PER_FIT / TRAIN_STATES))
         train_values, train_stderr = build_labels(
             train_states, day_index, params, rng, train_paths
         )

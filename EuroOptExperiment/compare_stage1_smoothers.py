@@ -6,6 +6,7 @@ from time import perf_counter
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from scipy.interpolate import PchipInterpolator
 
 from stage1_lsmc_european import (
     GBMParams,
@@ -298,48 +299,16 @@ def fit_natural_cubic(
     )
 
 
-def pchip_slopes(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    h = np.diff(x)
-    delta = np.diff(y) / h
-    slopes = np.zeros_like(y)
-
-    for i in range(1, len(y) - 1):
-        if delta[i - 1] == 0.0 or delta[i] == 0.0 or np.sign(delta[i - 1]) != np.sign(delta[i]):
-            slopes[i] = 0.0
-        else:
-            w1 = 2.0 * h[i] + h[i - 1]
-            w2 = h[i] + 2.0 * h[i - 1]
-            slopes[i] = (w1 + w2) / (w1 / delta[i - 1] + w2 / delta[i])
-
-    slopes[0] = delta[0]
-    slopes[-1] = delta[-1]
-    return slopes
-
-
 def fit_pchip(spot: np.ndarray, target: np.ndarray) -> ModelFit:
     x = np.asarray(spot, dtype=float)
     y = np.asarray(target, dtype=float)
-    slopes = pchip_slopes(x, y)
+    curve = PchipInterpolator(x, y, extrapolate=True)
 
     def predict(new_spot: np.ndarray) -> np.ndarray:
-        values = np.asarray(new_spot, dtype=float)
-        indices = np.searchsorted(x, values, side="right") - 1
-        indices = np.clip(indices, 0, len(x) - 2)
-        h = x[indices + 1] - x[indices]
-        t = (values - x[indices]) / h
-        t = np.clip(t, 0.0, 1.0)
-        h00 = 2.0 * t**3 - 3.0 * t**2 + 1.0
-        h10 = t**3 - 2.0 * t**2 + t
-        h01 = -2.0 * t**3 + 3.0 * t**2
-        h11 = t**3 - t**2
-        return (
-            h00 * y[indices]
-            + h10 * h * slopes[indices]
-            + h01 * y[indices + 1]
-            + h11 * h * slopes[indices + 1]
-        )
+        values = np.clip(np.asarray(new_spot, dtype=float), x[0], x[-1])
+        return curve(values)
 
-    return ModelFit(name="PCHIP", detail="shape-preserving cubic", predict=predict)
+    return ModelFit(name="PCHIP", detail="SciPy PchipInterpolator", predict=predict)
 
 
 def loess_predict(

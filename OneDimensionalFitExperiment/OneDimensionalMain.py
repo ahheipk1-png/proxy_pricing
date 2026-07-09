@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 from numpy.polynomial.chebyshev import chebvander
+from scipy.interpolate import Akima1DInterpolator, PchipInterpolator
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import AsianMain as asian
@@ -171,9 +172,11 @@ def fit_curve(x, y, method):
 
         return predict
     if method == "pchip":
-        return cubic_hermite(x, y, pchip_slopes(x, y))
+        curve = PchipInterpolator(x, y, extrapolate=True)
+        return lambda new_x: curve(np.clip(np.asarray(new_x), x[0], x[-1]))
     if method == "akima":
-        return cubic_hermite(x, y, akima_slopes(x, y))
+        curve = Akima1DInterpolator(x, y)
+        return lambda new_x: curve(np.clip(np.asarray(new_x), x[0], x[-1]))
     if method == "bezier_pchip":
         return cubic_bezier_from_slopes(x, y, pchip_slopes(x, y))
     if method == "bezier_global":

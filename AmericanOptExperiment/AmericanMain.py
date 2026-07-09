@@ -5,6 +5,8 @@ from pathlib import Path
 
 import numpy as np
 from numpy.polynomial.chebyshev import chebvander
+from scipy.interpolate import Akima1DInterpolator, PchipInterpolator
+from scipy.stats import norm, qmc
 
 try:
     from PIL import Image, ImageDraw
@@ -32,7 +34,7 @@ SUMMARY_PATH = OUTPUT_DIR / "summary.md"
 EXERCISE_STEPS = 100
 TRAIN_STATES = 121
 TOTAL_TRAIN_TRANSITIONS = 10_000_000
-PATHS_PER_STATE = int(np.ceil(TOTAL_TRAIN_TRANSITIONS / EXERCISE_STEPS / TRAIN_STATES))
+PATHS_PER_STATE = 1024
 BENCHMARK_TIME_STEPS = 4000
 BENCHMARK_SPOT_STEPS = 2000
 VALIDATION_POINTS = 401
@@ -74,6 +76,14 @@ def ridge_fit(design, target):
     return np.linalg.solve(design.T @ design + penalty, design.T @ target)
 
 
+def sobol_normals(n_points, dimension, seed):
+    count = 1 << int(np.ceil(np.log2(max(int(n_points), 1))))
+    engine = qmc.Sobol(d=dimension, scramble=True, seed=int(seed))
+    uniforms = engine.random_base2(int(np.log2(count)))
+    uniforms = np.clip(uniforms, 1e-12, 1.0 - 1e-12)
+    return norm.ppf(uniforms)
+
+
 def fit_continuation(spot, continuation, method):
     if method in {"linear_spline", "pchip_spline", "akima_spline"}:
         x = np.log(spot)
@@ -82,71 +92,15 @@ def fit_continuation(spot, continuation, method):
             def predict(new_spot):
                 return np.maximum(np.interp(np.log(new_spot), x, y), 0.0)
             return predict
-
-        h = np.diff(x)
-        delta = np.diff(y) / h
-        if method == "akima_spline" and len(x) >= 5:
-            extended = np.empty(len(delta) + 4)
-            extended[2:-2] = delta
-            extended[1] = 2.0 * delta[0] - delta[1]
-            extended[0] = 2.0 * extended[1] - delta[0]
-            extended[-2] = 2.0 * delta[-1] - delta[-2]
-            extended[-1] = 2.0 * extended[-2] - delta[-1]
-            slopes = np.empty_like(y)
-            for index in range(len(y)):
-                left_far = extended[index]
-                left = extended[index + 1]
-                right = extended[index + 2]
-                right_far = extended[index + 3]
-                weight_left = abs(right_far - right)
-                weight_right = abs(left - left_far)
-                if weight_left + weight_right > 1e-14:
-                    slopes[index] = (
-                        weight_left * left + weight_right * right
-                    ) / (weight_left + weight_right)
-                else:
-                    slopes[index] = 0.5 * (left + right)
-        else:
-            slopes = np.zeros_like(y)
-            interior = delta[:-1] * delta[1:] > 0.0
-            w1 = 2.0 * h[1:] + h[:-1]
-            w2 = h[1:] + 2.0 * h[:-1]
-            harmonic = (w1 + w2) / (
-                w1 / np.where(delta[:-1] == 0.0, 1.0, delta[:-1])
-                + w2 / np.where(delta[1:] == 0.0, 1.0, delta[1:])
-            )
-            slopes[1:-1] = np.where(interior, harmonic, 0.0)
-            slopes[0] = ((2.0 * h[0] + h[1]) * delta[0] - h[0] * delta[1]) / (
-                h[0] + h[1]
-            )
-            slopes[-1] = (
-                (2.0 * h[-1] + h[-2]) * delta[-1] - h[-1] * delta[-2]
-            ) / (h[-1] + h[-2])
-            if slopes[0] * delta[0] <= 0.0:
-                slopes[0] = 0.0
-            elif abs(slopes[0]) > 3.0 * abs(delta[0]):
-                slopes[0] = 3.0 * delta[0]
-            if slopes[-1] * delta[-1] <= 0.0:
-                slopes[-1] = 0.0
-            elif abs(slopes[-1]) > 3.0 * abs(delta[-1]):
-                slopes[-1] = 3.0 * delta[-1]
+        curve = (
+            PchipInterpolator(x, y, extrapolate=True)
+            if method == "pchip_spline"
+            else Akima1DInterpolator(x, y)
+        )
 
         def predict(new_spot):
-            new_x = np.log(np.maximum(new_spot, 1e-12))
-            index = np.clip(np.searchsorted(x, new_x) - 1, 0, len(x) - 2)
-            local_h = x[index + 1] - x[index]
-            t = np.clip((new_x - x[index]) / local_h, 0.0, 1.0)
-            h00 = 2.0 * t**3 - 3.0 * t**2 + 1.0
-            h10 = t**3 - 2.0 * t**2 + t
-            h01 = -2.0 * t**3 + 3.0 * t**2
-            h11 = t**3 - t**2
-            fitted = (
-                h00 * y[index]
-                + h10 * local_h * slopes[index]
-                + h01 * y[index + 1]
-                + h11 * local_h * slopes[index + 1]
-            )
-            return np.maximum(fitted, 0.0)
+            new_x = np.clip(np.log(np.maximum(new_spot, 1e-12)), x[0], x[-1])
+            return np.maximum(curve(new_x), 0.0)
         return predict
 
     if method == "direct_chebyshev_d9":
@@ -310,10 +264,7 @@ def draw_plot(path, step, spot, benchmark, prediction):
 
 def run():
     params = Params()
-    rng = np.random.default_rng(params.seed)
-    # Antithetic transition samples: half this many normals create PATHS_PER_STATE paths.
-    half_paths = (PATHS_PER_STATE + 1) // 2
-    normals = rng.standard_normal((EXERCISE_STEPS, half_paths))
+    normals = sobol_normals(PATHS_PER_STATE, EXERCISE_STEPS, params.seed).T
     validation_spot = np.exp(
         np.linspace(np.log(SPOT_MIN), np.log(SPOT_MAX), VALIDATION_POINTS)
     )

@@ -64,7 +64,7 @@ SPOT_RANGE = (65.0, 150.0)
 VAR_MULTIPLIER_RANGE = (0.35, 3.0)
 LOGIT_EPS = 1e-7
 
-OUTPUT_DIR = Path(__file__).resolve().parent / "results"
+OUTPUT_DIR = Path(__file__).resolve().parent / "BasketCliquetOptExperiment" / "results"
 PLOT_DIR = OUTPUT_DIR / "plots"
 METHOD_CSV = OUTPUT_DIR / "basket_slv_cliquet_proxy_method_results.csv"
 DETAIL_CSV = OUTPUT_DIR / "basket_slv_cliquet_proxy_validation_details.csv"

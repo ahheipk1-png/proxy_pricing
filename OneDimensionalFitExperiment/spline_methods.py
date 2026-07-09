@@ -4,6 +4,7 @@ from math import comb
 
 import numpy as np
 from numpy.polynomial.chebyshev import chebvander
+from scipy.interpolate import Akima1DInterpolator, PchipInterpolator
 
 
 EPS = 1e-12
@@ -521,9 +522,11 @@ def fit_curve(x, y, method):
     if method == "linear":
         return lambda new_x: np.interp(np.asarray(new_x), x, y)
     if method == "pchip":
-        return hermite_predictor(x, y, pchip_slopes(x, y))
+        curve = PchipInterpolator(x, y, extrapolate=True)
+        return lambda new_x: curve(np.clip(np.asarray(new_x), x[0], x[-1]))
     if method == "akima":
-        return hermite_predictor(x, y, akima_slopes(x, y))
+        curve = Akima1DInterpolator(x, y)
+        return lambda new_x: curve(np.clip(np.asarray(new_x), x[0], x[-1]))
     if method == "makima":
         return hermite_predictor(x, y, makima_slopes(x, y))
     if method == "natural_cubic_interpolation":

@@ -2,10 +2,10 @@ import csv
 from dataclasses import dataclass
 from math import erf, exp, log, sqrt
 from pathlib import Path
-from statistics import NormalDist
 
 import numpy as np
 from numpy.polynomial.chebyshev import chebvander
+from scipy.stats import norm, qmc
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -44,8 +44,8 @@ FORWARD_MONEYNESS_POINTS = 37
 FORWARD_RATIO_POINTS = 11
 FORWARD_LD_POINTS = 360
 TRAIN_SCENARIOS_PER_FIT = 10_000_000
-BENCHMARK_PATHS_PER_STATE = 500_000
-SIMULATION_BATCH_PATHS = 100_000
+BENCHMARK_PATHS_PER_STATE = 524_288
+SIMULATION_BATCH_PATHS = 131_072
 TEST_DAY_INDICES = [0, 3, 6, 9, 11]
 
 RAW_2D_DEGREE = 7
@@ -65,6 +65,29 @@ SHIFT_CAP = 4.0
 def normal_cdf(x):
     x = np.asarray(x, dtype=float)
     return 0.5 * (1.0 + np.vectorize(erf)(x / sqrt(2.0)))
+
+
+def power_of_two_at_least(n):
+    return 1 << int(np.ceil(np.log2(max(int(n), 1))))
+
+
+def qmc_path_count(target_paths):
+    return 2 * power_of_two_at_least((int(target_paths) + 1) // 2)
+
+
+def sobol_antithetic_batches(target_paths, dimension, seed, max_batch):
+    half_total = power_of_two_at_least((int(target_paths) + 1) // 2)
+    half_batch = power_of_two_at_least(max(1, int(max_batch) // 2))
+    half_batch = min(half_batch, half_total)
+    engine = qmc.Sobol(d=dimension, scramble=True, seed=int(seed))
+    remaining = half_total
+    while remaining:
+        half = min(half_batch, remaining)
+        base = engine.random(half)
+        base = np.clip(base, 1e-12, 1.0 - 1e-12)
+        base = norm.ppf(base)
+        yield np.vstack((base, -base))
+        remaining -= half
 
 
 def payoff_from_average(avg, params):
@@ -186,8 +209,7 @@ def adjusted_moneyness_coordinate(spot, running_sum_before, day_index, params):
 
 def make_state_grid(day_index, params, spot_points, avg_points):
     tau = future_count(day_index, params) * daily_dt(params)
-    normal = NormalDist()
-    d1_nodes = np.linspace(normal.inv_cdf(0.001), normal.inv_cdf(0.999), spot_points)
+    d1_nodes = np.linspace(norm.ppf(0.001), norm.ppf(0.999), spot_points)
     spot_nodes = spot_from_d1(d1_nodes, max(tau, daily_dt(params)), params)
 
     if day_index == 0:
@@ -442,13 +464,12 @@ def simulate_state_value(spot, running_sum_before, day_index, params, rng, n_pat
     sum_arith_sq = 0.0
     sum_geo_sq = 0.0
     sum_cross = 0.0
-    remaining = int(n_paths)
-
-    while remaining > 0:
-        batch_paths = min(remaining, SIMULATION_BATCH_PATHS)
-        half_paths = (batch_paths + 1) // 2
-        base = rng.standard_normal((half_paths, m))
-        normals = np.vstack((base + shift_vector, -base + shift_vector))[:batch_paths]
+    seed = rng.integers(0, np.iinfo(np.int64).max)
+    for base_normals in sobol_antithetic_batches(
+        n_paths, m, seed, SIMULATION_BATCH_PATHS
+    ):
+        batch_paths = len(base_normals)
+        normals = base_normals + shift_vector
         likelihood_ratio = np.exp(-normals @ shift_vector + 0.5 * theta**2)
 
         increments = (
@@ -477,7 +498,6 @@ def simulate_state_value(spot, running_sum_before, day_index, params, rng, n_pat
         sum_arith_sq += float(np.sum(discounted_arith * discounted_arith))
         sum_geo_sq += float(np.sum(discounted_geo * discounted_geo))
         sum_cross += float(np.sum(discounted_arith * discounted_geo))
-        remaining -= batch_paths
 
     mean_arith = sum_arith / count
     mean_geo = sum_geo / count
@@ -501,15 +521,17 @@ def simulate_state_value(spot, running_sum_before, day_index, params, rng, n_pat
 
 
 def paths_per_state_from_budget(total_scenarios, n_states):
-    return int(np.ceil(total_scenarios / max(n_states, 1)))
+    return qmc_path_count(np.ceil(total_scenarios / max(n_states, 1)))
 
 
 def build_labels(spots, running_sums, day_index, params, rng, n_paths):
+    common_seed = int(rng.integers(0, np.iinfo(np.int64).max))
     values = np.empty_like(spots, dtype=float)
     stderrs = np.empty_like(spots, dtype=float)
     for idx, (spot, running_sum) in enumerate(zip(spots, running_sums)):
+        state_rng = np.random.default_rng(common_seed)
         values[idx], stderrs[idx] = simulate_state_value(
-            float(spot), float(running_sum), day_index, params, rng, n_paths
+            float(spot), float(running_sum), day_index, params, state_rng, n_paths
         )
     return values, stderrs
 

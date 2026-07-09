@@ -2,9 +2,10 @@ import csv
 from dataclasses import dataclass
 from math import erf, exp, log, sqrt
 from pathlib import Path
-from statistics import NormalDist
 
 import numpy as np
+from scipy.interpolate import PchipInterpolator
+from scipy.stats import norm, qmc
 
 
 @dataclass(frozen=True)
@@ -20,9 +21,9 @@ class Params:
 
 
 METHOD_NAME = "log PCHIP"
-METHOD_DETAIL = "d1 coordinate, shape-preserving cubic Hermite interpolation"
+METHOD_DETAIL = "d1 coordinate, SciPy PCHIP interpolation, Sobol shifted MC labels"
 STATE_POINTS = 121
-MC_PATHS_PER_STATE = 25_000
+MC_PATHS_PER_STATE = 32_768
 GRID_POINTS = 501
 TIME_FRACTIONS = [0.2, 0.4, 0.6, 0.8, 1.0]
 RELATIVE_ERROR_FLOOR = 0.01
@@ -39,6 +40,18 @@ OUTPUT_PATH = (
 def normal_cdf(x):
     x = np.asarray(x, dtype=float)
     return 0.5 * (1.0 + np.vectorize(erf)(x / sqrt(2.0)))
+
+
+def power_of_two_at_least(n):
+    return 1 << int(np.ceil(np.log2(max(int(n), 1))))
+
+
+def sobol_normals(n_points, dimension, seed):
+    count = power_of_two_at_least(n_points)
+    engine = qmc.Sobol(d=dimension, scramble=True, seed=int(seed))
+    uniforms = engine.random_base2(int(np.log2(count)))
+    uniforms = np.clip(uniforms, 1e-12, 1.0 - 1e-12)
+    return norm.ppf(uniforms)
 
 
 def payoff(spot, params):
@@ -94,8 +107,7 @@ def spot_from_d1(d1, tau, params):
 def delta_space_spot_grid(tau, params, n_points, low_delta=1e-4, high_delta=1.0 - 1e-4):
     if tau <= 0.0:
         return np.linspace(50.0, 190.0, n_points)
-    normal = NormalDist()
-    d1_grid = np.linspace(normal.inv_cdf(low_delta), normal.inv_cdf(high_delta), n_points)
+    d1_grid = np.linspace(norm.ppf(low_delta), norm.ppf(high_delta), n_points)
     return spot_from_d1(d1_grid, tau, params)
 
 
@@ -121,12 +133,12 @@ def shifted_mc_value(spot, tau, params, rng):
     if tau <= 0.0:
         return payoff(spot, params)
 
-    half_paths = (MC_PATHS_PER_STATE + 1) // 2
-    base = rng.standard_normal((spot.size, half_paths))
+    half_paths = power_of_two_at_least((MC_PATHS_PER_STATE + 1) // 2)
+    base = sobol_normals(half_paths, 1, rng.integers(0, np.iinfo(np.int64).max))[:, 0]
     shift = payoff_boundary_shift(spot, tau, params)
     shifted_normals = np.concatenate(
-        (shift[:, None] + base, shift[:, None] - base), axis=1
-    )[:, :MC_PATHS_PER_STATE]
+        (shift[:, None] + base[None, :], shift[:, None] - base[None, :]), axis=1
+    )
 
     likelihood_ratio = np.exp(
         -shift[:, None] * shifted_normals + 0.5 * shift[:, None] ** 2
@@ -141,61 +153,17 @@ def shifted_mc_value(spot, tau, params, rng):
     )
 
 
-def pchip_slopes(x, y):
-    if len(x) == 2:
-        secant = (y[1] - y[0]) / (x[1] - x[0])
-        return np.array([secant, secant])
-    h = np.diff(x)
-    delta = np.diff(y) / h
-    slopes = np.zeros_like(y)
-    same_sign = delta[:-1] * delta[1:] > 0.0
-    w1 = 2.0 * h[1:] + h[:-1]
-    w2 = h[1:] + 2.0 * h[:-1]
-    denominator = (
-        w1 / np.where(delta[:-1] == 0.0, 1.0, delta[:-1])
-        + w2 / np.where(delta[1:] == 0.0, 1.0, delta[1:])
-    )
-    interior = np.zeros_like(denominator)
-    np.divide(
-        w1 + w2,
-        denominator,
-        out=interior,
-        where=np.abs(denominator) > 1e-14,
-    )
-    slopes[1:-1] = np.where(same_sign, interior, 0.0)
-    slopes[0] = ((2.0 * h[0] + h[1]) * delta[0] - h[0] * delta[1]) / (
-        h[0] + h[1]
-    )
-    slopes[-1] = (
-        (2.0 * h[-1] + h[-2]) * delta[-1] - h[-1] * delta[-2]
-    ) / (h[-1] + h[-2])
-    for index, secant in ((0, delta[0]), (-1, delta[-1])):
-        if slopes[index] * secant <= 0.0:
-            slopes[index] = 0.0
-        elif abs(slopes[index]) > 3.0 * abs(secant):
-            slopes[index] = 3.0 * secant
-    return slopes
-
-
 def fit_log_pchip_d1(spot, values, tau, params):
     x = d1_from_spot(spot, tau, params)
     order = np.argsort(x)
     x = x[order]
     target = np.log(np.maximum(values, 0.0) + 1e-10)
     target = target[order]
-    slopes = pchip_slopes(x, target)
+    curve = PchipInterpolator(x, target, extrapolate=True)
 
     def predict(new_spot):
-        new_x = d1_from_spot(new_spot, tau, params)
-        index = np.clip(np.searchsorted(x, new_x) - 1, 0, len(x) - 2)
-        h = x[index + 1] - x[index]
-        t = np.clip((new_x - x[index]) / h, 0.0, 1.0)
-        fitted = (
-            (2.0 * t**3 - 3.0 * t**2 + 1.0) * target[index]
-            + (t**3 - 2.0 * t**2 + t) * h * slopes[index]
-            + (-2.0 * t**3 + 3.0 * t**2) * target[index + 1]
-            + (t**3 - t**2) * h * slopes[index + 1]
-        )
+        new_x = np.clip(d1_from_spot(new_spot, tau, params), x[0], x[-1])
+        fitted = curve(new_x)
         return np.maximum(np.exp(np.clip(fitted, -30.0, 20.0)) - 1e-10, 0.0)
 
     return predict

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 from numpy.polynomial.chebyshev import chebvander
+from scipy.stats import norm, qmc
 
 
 @dataclass(frozen=True)
@@ -28,8 +29,8 @@ TEST_DAY_INDICES = [0, 3, 6, 9, 12]
 TRAIN_POINTS = 241
 VALIDATION_POINTS = 121
 TRAIN_SCENARIOS_PER_FIT = 10_000_000
-BENCHMARK_PATHS_PER_STATE = 500_000
-SIMULATION_BATCH_PATHS = 100_000
+BENCHMARK_PATHS_PER_STATE = 524_288
+SIMULATION_BATCH_PATHS = 131_072
 DEGREE = 19
 RIDGE = 1e-8
 LOGIT_EPS = 1e-8
@@ -45,6 +46,29 @@ OUTPUT_PATH = (
 def normal_cdf(x):
     x = np.asarray(x, dtype=float)
     return 0.5 * (1.0 + np.vectorize(erf)(x / sqrt(2.0)))
+
+
+def power_of_two_at_least(n):
+    return 1 << int(np.ceil(np.log2(max(int(n), 1))))
+
+
+def qmc_path_count(target_paths):
+    return 2 * power_of_two_at_least((int(target_paths) + 1) // 2)
+
+
+def sobol_antithetic_batches(target_paths, dimension, seed, max_batch):
+    half_total = power_of_two_at_least((int(target_paths) + 1) // 2)
+    half_batch = power_of_two_at_least(max(1, int(max_batch) // 2))
+    half_batch = min(half_batch, half_total)
+    engine = qmc.Sobol(d=dimension, scramble=True, seed=int(seed))
+    remaining = half_total
+    while remaining:
+        half = min(half_batch, remaining)
+        base = engine.random(half)
+        base = np.clip(base, 1e-12, 1.0 - 1e-12)
+        base = norm.ppf(base)
+        yield np.vstack((base, -base))
+        remaining -= half
 
 
 def period_dt(params):
@@ -192,13 +216,9 @@ def simulate_state_value(accrued, day_index, params, rng, n_paths):
     sum_payoff_sq = 0.0
     sum_control_sq = 0.0
     sum_cross = 0.0
-    remaining = int(n_paths)
-
-    while remaining > 0:
-        batch_paths = min(remaining, SIMULATION_BATCH_PATHS)
-        half_paths = (batch_paths + 1) // 2
-        base = rng.standard_normal((half_paths, m))
-        normals = np.vstack((base, -base))[:batch_paths]
+    seed = rng.integers(0, np.iinfo(np.int64).max)
+    for normals in sobol_antithetic_batches(n_paths, m, seed, SIMULATION_BATCH_PATHS):
+        batch_paths = len(normals)
         returns = np.exp(drift + vol_step * normals) - 1.0
         coupons = np.clip(returns, params.local_floor, params.local_cap)
         future_sum = np.sum(coupons, axis=1)
@@ -211,7 +231,6 @@ def simulate_state_value(accrued, day_index, params, rng, n_paths):
         sum_payoff_sq += float(np.sum(discounted_payoff * discounted_payoff))
         sum_control_sq += float(np.sum(discounted_control * discounted_control))
         sum_cross += float(np.sum(discounted_payoff * discounted_control))
-        remaining -= batch_paths
 
     mean_payoff = sum_payoff / count
     mean_control = sum_control / count
@@ -231,15 +250,17 @@ def simulate_state_value(accrued, day_index, params, rng, n_paths):
 
 
 def paths_per_state_from_budget(total_scenarios, n_states):
-    return int(np.ceil(total_scenarios / max(n_states, 1)))
+    return qmc_path_count(np.ceil(total_scenarios / max(n_states, 1)))
 
 
 def build_labels(accrued_grid, day_index, params, rng, n_paths):
+    common_seed = int(rng.integers(0, np.iinfo(np.int64).max))
     values = np.empty_like(accrued_grid, dtype=float)
     stderrs = np.empty_like(accrued_grid, dtype=float)
     for idx, accrued in enumerate(accrued_grid):
+        state_rng = np.random.default_rng(common_seed)
         values[idx], stderrs[idx] = simulate_state_value(
-            float(accrued), day_index, params, rng, n_paths
+            float(accrued), day_index, params, state_rng, n_paths
         )
     return values, stderrs
 

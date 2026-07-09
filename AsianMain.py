@@ -2,9 +2,10 @@ import csv
 from dataclasses import dataclass
 from math import erf, exp, log, sqrt
 from pathlib import Path
-from statistics import NormalDist
 
 import numpy as np
+from scipy.interpolate import PchipInterpolator
+from scipy.stats import norm, qmc
 
 
 @dataclass(frozen=True)
@@ -21,14 +22,14 @@ class Params:
 
 
 METHOD_NAME = "adjusted-moneyness PCHIP hybrid"
-METHOD_DETAIL = "monthly Asian, log value and log time-value PCHIP curves"
+METHOD_DETAIL = "monthly Asian, Sobol shifted MC labels, SciPy PCHIP curves"
 TEST_DAY_INDICES = [0, 3, 6, 9, 11]
 ADJUSTED_MONEYNESS_POINTS = 121
 VALIDATION_SPOT_POINTS = 9
 VALIDATION_AVG_POINTS = 7
 TRAIN_SCENARIOS_PER_FIT = 10_000_000
-BENCHMARK_PATHS_PER_STATE = 500_000
-SIMULATION_BATCH_PATHS = 100_000
+BENCHMARK_PATHS_PER_STATE = 524_288
+SIMULATION_BATCH_PATHS = 131_072
 HYBRID_INTRINSIC_SWITCH = 0.05
 LOG_EPS = 1e-12
 RELATIVE_ERROR_FLOOR = 0.01
@@ -45,6 +46,29 @@ OUTPUT_PATH = (
 def normal_cdf(x):
     x = np.asarray(x, dtype=float)
     return 0.5 * (1.0 + np.vectorize(erf)(x / sqrt(2.0)))
+
+
+def power_of_two_at_least(n):
+    return 1 << int(np.ceil(np.log2(max(int(n), 1))))
+
+
+def qmc_path_count(target_paths):
+    return 2 * power_of_two_at_least((int(target_paths) + 1) // 2)
+
+
+def sobol_antithetic_batches(target_paths, dimension, seed, max_batch):
+    half_total = power_of_two_at_least((int(target_paths) + 1) // 2)
+    half_batch = power_of_two_at_least(max(1, int(max_batch) // 2))
+    half_batch = min(half_batch, half_total)
+    engine = qmc.Sobol(d=dimension, scramble=True, seed=int(seed))
+    remaining = half_total
+    while remaining:
+        half = min(half_batch, remaining)
+        base = engine.random(half)
+        base = np.clip(base, 1e-12, 1.0 - 1e-12)
+        base = norm.ppf(base)
+        yield np.vstack((base, -base))
+        remaining -= half
 
 
 def payoff_from_average(avg, params):
@@ -144,8 +168,7 @@ def adjusted_moneyness_coordinate(spot, running_sum_before, day_index, params):
 
 def make_state_grid(day_index, params, spot_points, avg_points):
     tau = future_count(day_index, params) * daily_dt(params)
-    normal = NormalDist()
-    d1_nodes = np.linspace(normal.inv_cdf(0.001), normal.inv_cdf(0.999), spot_points)
+    d1_nodes = np.linspace(norm.ppf(0.001), norm.ppf(0.999), spot_points)
     spot_nodes = spot_from_d1(d1_nodes, max(tau, daily_dt(params)), params)
 
     if day_index == 0:
@@ -281,13 +304,12 @@ def simulate_state_value(spot, running_sum_before, day_index, params, rng, n_pat
     sum_arith_sq = 0.0
     sum_geo_sq = 0.0
     sum_cross = 0.0
-    remaining = int(n_paths)
-
-    while remaining > 0:
-        batch_paths = min(remaining, SIMULATION_BATCH_PATHS)
-        half_paths = (batch_paths + 1) // 2
-        base = rng.standard_normal((half_paths, m))
-        normals = np.vstack((base + shift_vector, -base + shift_vector))[:batch_paths]
+    seed = rng.integers(0, np.iinfo(np.int64).max)
+    for base_normals in sobol_antithetic_batches(
+        n_paths, m, seed, SIMULATION_BATCH_PATHS
+    ):
+        batch_paths = len(base_normals)
+        normals = base_normals + shift_vector
         likelihood_ratio = np.exp(-normals @ shift_vector + 0.5 * theta**2)
 
         increments = (
@@ -315,7 +337,6 @@ def simulate_state_value(spot, running_sum_before, day_index, params, rng, n_pat
         sum_arith_sq += float(np.sum(discounted_arith * discounted_arith))
         sum_geo_sq += float(np.sum(discounted_geo * discounted_geo))
         sum_cross += float(np.sum(discounted_arith * discounted_geo))
-        remaining -= batch_paths
 
     mean_arith = sum_arith / count
     mean_geo = sum_geo / count
@@ -335,20 +356,22 @@ def simulate_state_value(spot, running_sum_before, day_index, params, rng, n_pat
 
 
 def paths_per_state_from_budget(total_scenarios, n_states):
-    return int(np.ceil(total_scenarios / max(n_states, 1)))
+    return qmc_path_count(np.ceil(total_scenarios / max(n_states, 1)))
 
 
 def build_labels(spots, running_sums, day_index, params, rng, n_paths):
+    common_seed = int(rng.integers(0, np.iinfo(np.int64).max))
     values = np.empty_like(spots, dtype=float)
     stderrs = np.empty_like(spots, dtype=float)
     for idx, (spot, running_sum) in enumerate(zip(spots, running_sums)):
+        state_rng = np.random.default_rng(common_seed)
         values[idx], stderrs[idx] = simulate_state_value(
-            float(spot), float(running_sum), day_index, params, rng, n_paths
+            float(spot), float(running_sum), day_index, params, state_rng, n_paths
         )
     return values, stderrs
 
 
-def fit_pchip_curve(x, y):
+def fit_scipy_pchip_curve(x, y):
     order = np.argsort(x)
     x = np.asarray(x, dtype=float)[order]
     y = np.asarray(y, dtype=float)[order]
@@ -356,51 +379,10 @@ def fit_pchip_curve(x, y):
     y = y[unique_index]
     if len(x) == 1:
         return lambda new_x: np.full_like(np.asarray(new_x), y[0], dtype=float)
-
-    h = np.diff(x)
-    delta = np.diff(y) / h
-    slopes = np.zeros_like(y)
-    if len(x) == 2:
-        slopes[:] = delta[0]
-    else:
-        same_sign = delta[:-1] * delta[1:] > 0.0
-        w1 = 2.0 * h[1:] + h[:-1]
-        w2 = h[1:] + 2.0 * h[:-1]
-        denominator = (
-            w1 / np.where(delta[:-1] == 0.0, 1.0, delta[:-1])
-            + w2 / np.where(delta[1:] == 0.0, 1.0, delta[1:])
-        )
-        interior = np.zeros_like(denominator)
-        np.divide(
-            w1 + w2,
-            denominator,
-            out=interior,
-            where=np.abs(denominator) > 1e-14,
-        )
-        slopes[1:-1] = np.where(same_sign, interior, 0.0)
-        slopes[0] = (
-            (2.0 * h[0] + h[1]) * delta[0] - h[0] * delta[1]
-        ) / (h[0] + h[1])
-        slopes[-1] = (
-            (2.0 * h[-1] + h[-2]) * delta[-1] - h[-1] * delta[-2]
-        ) / (h[-1] + h[-2])
-        for index, secant in ((0, delta[0]), (-1, delta[-1])):
-            if slopes[index] * secant <= 0.0:
-                slopes[index] = 0.0
-            elif abs(slopes[index]) > 3.0 * abs(secant):
-                slopes[index] = 3.0 * secant
+    curve = PchipInterpolator(x, y, extrapolate=True)
 
     def predict(new_x):
-        new_x = np.asarray(new_x, dtype=float)
-        index = np.clip(np.searchsorted(x, new_x) - 1, 0, len(x) - 2)
-        local_h = x[index + 1] - x[index]
-        t = np.clip((new_x - x[index]) / local_h, 0.0, 1.0)
-        return (
-            (2.0 * t**3 - 3.0 * t**2 + 1.0) * y[index]
-            + (t**3 - 2.0 * t**2 + t) * local_h * slopes[index]
-            + (-2.0 * t**3 + 3.0 * t**2) * y[index + 1]
-            + (t**3 - t**2) * local_h * slopes[index + 1]
-        )
+        return curve(np.clip(np.asarray(new_x, dtype=float), x[0], x[-1]))
 
     return predict
 
@@ -426,10 +408,10 @@ def fit_adjusted_hybrid_proxy(spots, running_sums, values, day_index, params):
         (values[train_mask] - base) / spots[train_mask], 0.0
     )
 
-    value_curve = fit_pchip_curve(
+    value_curve = fit_scipy_pchip_curve(
         x, np.log(normalized_value + LOG_EPS)
     )
-    time_curve = fit_pchip_curve(
+    time_curve = fit_scipy_pchip_curve(
         x, np.log(normalized_time_value + LOG_EPS)
     )
 

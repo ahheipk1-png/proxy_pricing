@@ -10,17 +10,17 @@ python AsianMain.py
 python CliquetMain.py
 python SLVCliquetMain.py
 python AmericanMain.py
-python BarrierOptExperiment/BarrierMain.py
-python BasketCliquetOptExperiment/BasketCliquetMain.py
+python BarrierMain.py
+python BasketCliquetMain.py
 python OneDimensionalFitExperiment/ExpandedSplineStudy.py
 ```
 
 `EuroMain.py` runs only the current European option default:
 
 ```text
-tail-biased shifted MC labels
+Sobol tail-biased shifted MC labels
 log(option value) target
-PCHIP interpolation in d1
+SciPy PCHIP interpolation in d1
 shape-preserving cubic Hermite slopes
 no asymptotic proxy
 ```
@@ -35,8 +35,8 @@ monthly arithmetic Asian call
 12 observations over 1 year
 adjusted-moneyness state transform
 log(value / spot) and log(time value / spot) targets
-PCHIP interpolation for both one-dimensional targets
-shifted antithetic MC labels
+SciPy PCHIP interpolation for both one-dimensional targets
+Sobol shifted antithetic MC labels
 geometric Asian control variate for benchmark
 ```
 
@@ -59,15 +59,12 @@ boundary-enriched accrued-return training grid
 It is standalone and does not import the exploratory modules under
 `CliquetOptExperiment/`.
 
-`CliquteMain.py` is a compatibility wrapper for the common misspelling and calls
-`CliquetMain.py`.
-
 `SLVCliquetMain.py` runs the three-state SLV cliquet default:
 
 ```text
 state = accrued return, spot, variance
 bounded-logit price target
-lower-tail likelihood-ratio importance sampling
+Sobol lower-tail likelihood-ratio importance sampling
 local quadratic fit with 9-12 resets remaining
 anisotropic Chebyshev fit with 3-6 resets remaining
 ```
@@ -76,25 +73,33 @@ anisotropic Chebyshev fit with 3-6 resets remaining
 
 ```text
 100-date MC dynamic programming
-10 million one-step training transitions
-shape-preserving PCHIP continuation proxy
+Sobol one-step training transitions
+SciPy PCHIP continuation proxy
 exact intrinsic-value exercise constraint
 projected finite-difference benchmark
 ```
 
-`BarrierOptExperiment/BarrierMain.py` runs the barrier study:
+`BarrierMain.py` runs the barrier study:
 
 ```text
 down, up, and double knock-out calls
 monthly discrete and continuous monitoring
 Brownian-bridge continuous-crossing correction
-common-random-number and antithetic MC labels
-PCHIP, Akima, Chebyshev, and Bernstein comparison
+common-Sobol and antithetic MC labels
+SciPy PCHIP, SciPy Akima, Chebyshev, and Bernstein comparison
 ```
 
 Zero-rebate knock-ins are obtained by in/out parity. The barrier study uses
-10 million training scenarios per fitted date and 500,000 benchmark paths per
+at least 10 million training scenarios per fitted date and 524,288 benchmark paths per
 validation state.
+
+`BasketCliquetMain.py` runs the three-underlying SLV basket cliquet study:
+
+```text
+3 underlying SLV state variables plus accrued return
+Sobol batched MC with antithetic and shifted mixture samples
+sparse Chebyshev, local quadratic, and adaptive blend comparisons
+```
 
 `OneDimensionalFitExperiment/ExpandedSplineStudy.py` compares 17 spline,
 local, spectral, rational, and kernel methods across 99 European, American,
@@ -123,6 +128,8 @@ AsianOptExperiment/default_run/asian_default_results.csv
 CliquetOptExperiment/default_run/cliquet_default_results.csv
 SLVCliquetOptExperiment/default_run/slv_cliquet_default_results.csv
 AmericanOptExperiment/default_run/american_default_results.csv
+BarrierOptExperiment/results/barrier_proxy_method_results.csv
+BasketCliquetOptExperiment/results/basket_slv_cliquet_proxy_method_results.csv
 ```
 
 ## Setup

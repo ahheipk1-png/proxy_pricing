@@ -6,6 +6,8 @@ from math import exp, sqrt
 from pathlib import Path
 
 import numpy as np
+from scipy.interpolate import PchipInterpolator
+from scipy.stats import norm, qmc
 
 
 @dataclass(frozen=True)
@@ -21,7 +23,7 @@ class Params:
 EXERCISE_STEPS = 100
 TRAIN_STATES = 121
 TOTAL_TRAIN_TRANSITIONS = 10_000_000
-PATHS_PER_STATE = int(np.ceil(TOTAL_TRAIN_TRANSITIONS / EXERCISE_STEPS / TRAIN_STATES))
+PATHS_PER_STATE = 1024
 BENCHMARK_TIME_STEPS = 4000
 BENCHMARK_SPOT_STEPS = 2000
 VALIDATION_POINTS = 401
@@ -46,52 +48,16 @@ def training_spots():
     return np.sort(np.exp(low + 0.5 * (nodes + 1.0) * (high - low)))
 
 
-def pchip(x, y):
-    x = np.asarray(x)
-    y = np.asarray(y)
-    h = np.diff(x)
-    delta = np.diff(y) / h
-    slopes = np.zeros_like(y)
-    same_sign = delta[:-1] * delta[1:] > 0.0
-    w1 = 2.0 * h[1:] + h[:-1]
-    w2 = h[1:] + 2.0 * h[:-1]
-    denominator = (
-        w1 / np.where(delta[:-1] == 0.0, 1.0, delta[:-1])
-        + w2 / np.where(delta[1:] == 0.0, 1.0, delta[1:])
-    )
-    slopes[1:-1] = np.where(same_sign, (w1 + w2) / denominator, 0.0)
-    slopes[0] = ((2.0 * h[0] + h[1]) * delta[0] - h[0] * delta[1]) / (
-        h[0] + h[1]
-    )
-    slopes[-1] = (
-        (2.0 * h[-1] + h[-2]) * delta[-1] - h[-1] * delta[-2]
-    ) / (h[-1] + h[-2])
-    for index, secant in ((0, delta[0]), (-1, delta[-1])):
-        if slopes[index] * secant <= 0.0:
-            slopes[index] = 0.0
-        elif abs(slopes[index]) > 3.0 * abs(secant):
-            slopes[index] = 3.0 * secant
-
-    def predict(new_x):
-        new_x = np.asarray(new_x)
-        index = np.clip(np.searchsorted(x, new_x) - 1, 0, len(x) - 2)
-        local_h = x[index + 1] - x[index]
-        t = np.clip((new_x - x[index]) / local_h, 0.0, 1.0)
-        return np.maximum(
-            (2 * t**3 - 3 * t**2 + 1) * y[index]
-            + (t**3 - 2 * t**2 + t) * local_h * slopes[index]
-            + (-2 * t**3 + 3 * t**2) * y[index + 1]
-            + (t**3 - t**2) * local_h * slopes[index + 1],
-            0.0,
-        )
-
-    return predict
+def sobol_normals(n_points, dimension, seed):
+    count = 1 << int(np.ceil(np.log2(max(int(n_points), 1))))
+    engine = qmc.Sobol(d=dimension, scramble=True, seed=int(seed))
+    uniforms = engine.random_base2(int(np.log2(count)))
+    uniforms = np.clip(uniforms, 1e-12, 1.0 - 1e-12)
+    return norm.ppf(uniforms)
 
 
 def train_proxy(params):
-    rng = np.random.default_rng(params.seed)
-    half_paths = (PATHS_PER_STATE + 1) // 2
-    normals = rng.standard_normal((EXERCISE_STEPS, half_paths))
+    normals = sobol_normals(PATHS_PER_STATE, EXERCISE_STEPS, params.seed).T
     dt = params.maturity / EXERCISE_STEPS
     df = exp(-params.rate * dt)
     drift = (params.rate - params.div_yield - 0.5 * params.vol**2) * dt
@@ -105,12 +71,18 @@ def train_proxy(params):
         up = spots[:, None] * np.exp(drift + vol_step * z)[None, :]
         down = spots[:, None] * np.exp(drift - vol_step * z)[None, :]
         continuation = 0.5 * df * np.mean(value(up) + value(down), axis=1)
-        continuation_proxy = pchip(np.log(spots), continuation)
+        log_spots = np.log(spots)
+        continuation_proxy = PchipInterpolator(
+            log_spots, continuation, extrapolate=True
+        )
 
         def current_value(new_spot, continuation_proxy=continuation_proxy):
             return np.maximum(
                 intrinsic(new_spot, params),
-                continuation_proxy(np.log(np.maximum(new_spot, 1e-12))),
+                np.maximum(
+                    continuation_proxy(np.log(np.maximum(new_spot, 1e-12))),
+                    0.0,
+                ),
             )
 
         value = current_value
