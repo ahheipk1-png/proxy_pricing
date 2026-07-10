@@ -113,10 +113,18 @@ The current default method is `pchip_calibrated_log_factor_pca`.
 `BasketCliquetMain.py` runs the three-underlying SLV basket cliquet study:
 
 ```text
-3 underlying SLV state variables plus accrued return
-Sobol batched MC with antithetic and shifted mixture samples
-sparse Chebyshev, local quadratic, and adaptive blend comparisons
+generalized multi-asset cliquet payoff cases
+weighted-average, basket-ratio, order-statistic, and spread/bonus coupons
+state = accrued return, 3 spots, and 3 variances
+grouped Sobol/LR labels across accrued-return layers
+8-component common/dispersion likelihood-ratio mixture
+PCA coordinates for log spots and log variances
+local, sparse Chebyshev, anchored residual, and accrued-PCHIP/kNN comparisons
 ```
+
+The latest basket cliquet result is mixed: grouped labels and PCA features bring
+`basket_return` to 6.448% worst max error and `average_clipped` to 7.967%, but
+order-statistic coupons remain above target.
 
 `OneDimensionalFitExperiment/ExpandedSplineStudy.py` compares 17 spline,
 local, spectral, rational, and kernel methods across 99 European, American,

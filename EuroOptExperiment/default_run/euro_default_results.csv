@@ -1,6 +1,0 @@
-time,tau,method,detail,max_rel,p99_rel,mae,max_abs
-0.2,0.8,log PCHIP,"d1 coordinate, shape-preserving cubic Hermite interpolation",0.013746626851284752,0.00932350548608548,0.013602881462061248,0.10231694134784419
-0.4,0.6,log PCHIP,"d1 coordinate, shape-preserving cubic Hermite interpolation",0.02637184327691843,0.015770571858842557,0.01150578701816762,0.06962220212267312
-0.6,0.4,log PCHIP,"d1 coordinate, shape-preserving cubic Hermite interpolation",0.013794214660184514,0.012510944079161753,0.00789499508965972,0.06979029229866995
-0.8,0.19999999999999996,log PCHIP,"d1 coordinate, shape-preserving cubic Hermite interpolation",0.020800605039290376,0.01670982997180521,0.005021002082328718,0.03851360538315696
-1.0,0.0,log PCHIP,"d1 coordinate, shape-preserving cubic Hermite interpolation",0.0,0.0,0.0,0.0

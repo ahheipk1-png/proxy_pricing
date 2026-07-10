@@ -1,4 +1,5 @@
 from pathlib import Path
+from html import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -10,7 +11,6 @@ from reportlab.platypus import (
     KeepTogether,
     PageBreak,
     Paragraph,
-    Preformatted,
     SimpleDocTemplate,
     Spacer,
     Table,
@@ -122,6 +122,19 @@ styles.add(
 )
 styles.add(
     ParagraphStyle(
+        name="MathCustom",
+        parent=styles["BodyText"],
+        fontName="Times-Italic",
+        fontSize=9.2,
+        leading=13.4,
+        leftIndent=2,
+        rightIndent=2,
+        textColor=colors.HexColor("#17212B"),
+        spaceAfter=0,
+    )
+)
+styles.add(
+    ParagraphStyle(
         name="Callout",
         parent=styles["BodyText"],
         fontName="Helvetica-Bold",
@@ -167,7 +180,29 @@ def h2(text):
 
 
 def eq(text):
-    return Preformatted(text.strip(), styles["CodeCustom"])
+    lines = [line.rstrip() for line in text.strip().splitlines()]
+    body = "<br/>".join(
+        escape(line).replace(" ", "&nbsp;") if line else "&nbsp;"
+        for line in lines
+    )
+    item = Table(
+        [[Paragraph(body, styles["MathCustom"])]],
+        colWidths=[6.75 * inch],
+        hAlign="LEFT",
+    )
+    item.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FAFBFC")),
+                ("BOX", (0, 0), (-1, -1), 0.45, colors.HexColor("#B8C5D1")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 9),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ]
+        )
+    )
+    return item
 
 
 def theorem(title, text):
@@ -264,7 +299,7 @@ story.extend(
                 ["Barrier call", "Spot plus alive/hit flag", "PCHIP + Brownian bridge"],
                 ["GBM cliquet", "1D accrued clipped return", "Bounded Chebyshev degree 19"],
                 ["Single-name SLV cliquet", "Accrued, spot, variance", "Local/spectral hybrid"],
-                ["3-asset SLV basket cliquet", "Accrued, 3 spots, 3 variances", "Sparse baseline; enrichment needed"],
+                ["3-asset SLV basket cliquet", "Accrued, 3 spots, 3 variances", "Grouped labels + PCA; order-statistic enrichment needed"],
             ],
             widths=[1.45 * inch, 2.55 * inch, 2.85 * inch],
         ),
@@ -1326,15 +1361,31 @@ story.append(PageBreak())
 story.extend(
     [
         h1("13. Three-underlying SLV basket cliquet"),
-        h2("13.1 Three coupon definitions"),
+        h2("13.1 Generalized coupon definitions"),
         table(
             [
                 ["Variant", "Monthly coupon"],
                 ["Basket return", "clip(mean(R1,R2,R3), local floor, local cap)"],
+                ["Weighted average", "clip(sum_i w_i R_i, local floor, local cap)"],
+                ["Basket ratio", "clip(sum_i w_i S_i(end) / sum_i w_i S_i(start) - 1, local floor, local cap)"],
                 ["Average clipped", "mean(clip(R1),clip(R2),clip(R3))"],
+                ["Second worst", "clip(second order statistic of R_i, local floor, local cap)"],
                 ["Worst of", "clip(min(R1,R2,R3), local floor, local cap)"],
+                ["Best of", "clip(max(R1,R2,R3), local floor, local cap)"],
+                ["Spread bonus", "clip(weighted average) - L_spd clip(max R_i - min R_i) + bonus 1_{basket ratio >= 0}"],
             ],
             widths=[1.55 * inch, 5.25 * inch],
+        ),
+        eq(
+            """
+R_i^(j) = S_i(T_j^end) / S_i(T_j^start) - 1
+
+R_basket^(j) = [sum_i w_i S_i(T_j^end)] / [sum_i w_i S_i(T_j^start)] - 1
+
+C_j = local coupon after clipping, spread adjustment, and optional bonus
+G = sum_(j=1)^m C_j
+Payoff = N clip(G, global floor, global cap).
+"""
         ),
         h2("13.2 Seven-dimensional Markov state"),
         eq(
@@ -1360,17 +1411,65 @@ Corr(Z^M)=R_market.
         ),
         h2("13.3 Sampling"),
         p(
-            "2,001 low-discrepancy boundary-enriched states cover accrued return, three log "
-            "spots, and three log variances. Approximately 10 million scenarios are spread "
-            "over each reset-date fit. Each of 31 independent validation states uses "
-            "500,000 paths."
+            "The current generalized experiment uses 1,009 low-discrepancy market states "
+            "and 17 accrued-return layers per market state. The labels are grouped: one "
+            "Sobol SLV simulation produces future coupon sums, and those same sums price "
+            "all accrued layers for that market state. This spends the path budget on "
+            "future uncertainty rather than resimulating identical spot/variance states."
         ),
-        h2("13.4 Features and bounded target"),
         p(
-            "Conditional coupon moments define separate lower and upper standardized "
-            "cushions. Keeping both is important: one midpoint z cannot distinguish states "
-            "with equal standardized midpoint but different dispersion and distances to "
-            "the two global bounds."
+            "Each market-state label uses 32,768 Sobol paths after the component-count "
+            "rounding. Validation uses 31 independent states and 524,288 Sobol paths per "
+            "state. The path sampler is a likelihood-ratio mixture over common market "
+            "directions and dispersion directions, with antithetic pairs inside each "
+            "component."
+        ),
+        eq(
+            """
+q(z) = (1/K) sum_(k=1)^K phi(z - mu_k)
+
+weight(z) = phi(z) / q(z)
+          = 1 / [(1/K) sum_k exp(mu_k' z - ||mu_k||^2 / 2)].
+"""
+        ),
+        h2("13.4 PCA and payoff-aware coordinates"),
+        p(
+            "Raw spot and variance coordinates are retained, but the proxy also uses "
+            "orthogonal PCA directions from the instantaneous covariance matrix. In three "
+            "dimensions these are market level plus two spread-like modes. The feature "
+            "set also contains lower/upper payoff cushions, coupon skewness, local floor "
+            "and cap masses, weighted averages, minima, maxima, and dispersion measures."
+        ),
+        eq(
+            """
+Sigma_0 = diag(sqrt(theta)) R_market diag(sqrt(theta))
+Sigma_0 e_k = lambda_k e_k
+
+spot PCA features     = log(S/S0)' e_k
+variance PCA features = log(v/theta)' e_k.
+"""
+        ),
+        h2("13.5 Result and limitation"),
+        p(
+            "Grouped labels and PCA features materially improved the basket-like coupons, "
+            "but they did not solve all generalized coupon styles. Order-statistic coupons "
+            "remain hard because a small value near the global floor is a rare event in a "
+            "bounded sum of clipped maximum or minimum returns. The result is useful but "
+            "not yet a universal 5-8% basket-cliquet proxy."
+        ),
+        table(
+            [
+                ["Variant", "Best method", "Worst max", "Average p99"],
+                ["Basket return", "Adaptive local/sparse blend", "6.448%", "3.060%"],
+                ["Weighted average", "Adaptive local/sparse blend", "11.280%", "4.946%"],
+                ["Basket ratio", "Adaptive local/sparse blend", "19.942%", "7.946%"],
+                ["Average clipped", "Adaptive local/sparse blend", "7.967%", "4.838%"],
+                ["Second worst", "Local summary quadratic", "11.326%", "7.078%"],
+                ["Worst of", "Local summary quadratic", "29.002%", "13.103%"],
+                ["Best of", "Local summary quadratic", "66.880%", "24.321%"],
+                ["Spread bonus", "Local summary quadratic", "15.911%", "12.466%"],
+            ],
+            widths=[1.45 * inch, 2.35 * inch, 1.25 * inch, 1.25 * inch],
         ),
         PageBreak(),
     ]
@@ -1381,41 +1480,53 @@ story.extend(
         h1("14. Basket high-dimensional model search"),
         p(
             "The search compared local full-state and summary regressions, sparse anisotropic "
-            "Chebyshev terms, Gaussian RBF kernels, and a two-layer tanh neural ensemble. "
-            "With averaged state labels, neither RBF nor the small neural ensemble was "
-            "uniformly competitive. This does not reject neural networks in general; it "
-            "shows that architecture and state coverage matter."
+            "Chebyshev terms, Gaussian RBF kernels, a two-layer tanh neural ensemble, "
+            "moment-anchored residual fits, accrued-return PCHIP/kNN interpolation, and "
+            "payoff-aware PCA features. With these training sizes, the robust winners are "
+            "still simple local/sparse regressions for most variants."
         ),
-        h2("14.1 Development ensemble and validation failure"),
+        h2("14.1 Grouped-label improvement"),
         eq(
             """
-V_proxy = w(m) V_local + [1-w(m)] V_spectral
-w(m) = 0.16 + 0.02 m,
-m = remaining coupons.
+For fixed market state M and simulated future coupon sums C_path:
+
+V(a, M) = discount E[ N clip(a + C_path, floor, cap) | M ].
+
+Thus one simulation of C_path can price many accrued values a_1,...,a_L.
 """
         ),
         p(
-            "For symmetric basket-return and average-clipped coupons, V_local used summary "
-            "features. Worst-of used the full state. The blend performed well on the first "
-            "development design but did not generalize, so it was retired."
+            "This grouped construction is exact under the same simulated future paths; it "
+            "does not approximate the payoff. It simply reuses the path sums for multiple "
+            "initial accrued values. It reduced training noise substantially compared with "
+            "simulating every accrued layer independently."
+        ),
+        h2("14.2 Why the order-statistic cases remain difficult"),
+        p(
+            "For best-of and worst-of coupons, the future sum distribution is bounded, "
+            "skewed, and sensitive to cross-asset dispersion. Near the global floor the "
+            "value may be only a few cents, so a small absolute miss creates a large "
+            "percentage error. However, some misses are still too large to dismiss: the "
+            "month-6 best-of case has a 0.048 dollar miss on a 0.076 dollar benchmark."
         ),
         table(
             [
-                ["Variant", "Development", "Validation 2", "Validation 3", "Worst"],
-                ["Basket return", "10.258%", "7.108%", "18.500%", "18.500%"],
-                ["Average clipped", "5.624%", "11.566%", "5.745%", "11.566%"],
-                ["Worst of", "9.700%", "9.862%", "6.774%", "9.862%"],
+                ["Method idea", "Outcome"],
+                ["Moment-normal anchor", "Too Gaussian; overestimates bounded rare tails"],
+                ["Anchored sparse Chebyshev", "Reduced neither max error nor p99"],
+                ["Accrued PCHIP/kNN", "Good structure, but market-state interpolation overpredicted tails"],
+                ["PCA/spread features", "Helpful as diagnostics, not sufficient alone"],
+                ["Grouped accrued labels", "Clear improvement; kept as methodology"],
             ],
-            widths=[1.55 * inch, 1.3 * inch, 1.3 * inch, 1.3 * inch, 1.1 * inch],
+            widths=[2.2 * inch, 4.4 * inch],
         ),
         p(
-            "These are fixed sparse-spectral results using 2,001 states. A 5,001-state "
-            "design, local models, RBF kernels, small tanh networks, random-feature "
-            "networks, and bagging were also tested. None guaranteed 5-8% on the third "
-            "untouched design. The next credible step is adaptive state enrichment around "
-            "failed neighborhoods, followed by another untouched validation design."
+            "The next credible improvement is adaptive state enrichment targeted at the "
+            "failed order-statistic neighborhoods, or a larger path-level neural model "
+            "trained directly on simulated paths. A fixed generic spline or polynomial "
+            "basis is probably not enough for every generalized basket cliquet style."
         ),
-        h2("14.2 Literature-inspired residual search"),
+        h2("14.3 Literature-inspired residual search"),
         p(
             "A clipped-normal moment baseline was used as a low-fidelity model, followed "
             "by direct or residual sparse Hermite, local, Nystrom Matern, and fixed "
@@ -1478,7 +1589,6 @@ story.extend(
         bullet("Use new random seeds and a stronger benchmark."),
         bullet("Report value, signed error, relative error, and benchmark standard error."),
         bullet("Slice results by maturity, payoff region, and state-space boundary."),
-        bullet("For PFE, run the proxy through outer scenarios and compare exposure quantiles by date."),
         PageBreak(),
     ]
 )
