@@ -34,6 +34,9 @@ SIMULATION_BATCH_PATHS = 8_192
 RELATIVE_ERROR_FLOOR = 0.05
 LOG_EPS = 1e-10
 RIDGE = 3e-6
+USE_IMPORTANCE_SAMPLING = True
+MIN_IMPORTANCE_FUTURE_FIXINGS = 10
+MAX_IMPORTANCE_SHIFT_NORM = 1.65
 OUTPUT_DIR = Path(__file__).resolve().parent / "BasketAsianOptExperiment" / "results"
 PLOT_DIR = OUTPUT_DIR / "plots"
 METHOD_CSV = OUTPUT_DIR / "basket_asian_proxy_method_results.csv"
@@ -74,6 +77,17 @@ def sobol_batches(target_paths, dimension, seed, max_batch):
         uniforms = np.clip(uniforms, 1e-12, 1.0 - 1e-12)
         yield norm.ppf(uniforms)
         remaining -= batch
+
+
+def mixture_likelihood_weight(actual_normals, shift):
+    shift = np.asarray(shift, dtype=float)
+    norm_sq = float(shift @ shift)
+    if norm_sq < 1e-18:
+        return np.ones(len(actual_normals))
+    log_density_ratio_shift_to_base = actual_normals @ shift - 0.5 * norm_sq
+    log_density_ratio_shift_to_base = np.clip(log_density_ratio_shift_to_base, -50.0, 50.0)
+    proposal_over_base = 0.5 + 0.5 * np.exp(log_density_ratio_shift_to_base)
+    return 1.0 / proposal_over_base
 
 
 def asset_setup(params):
@@ -247,7 +261,27 @@ def make_states(day_index, params, count, validation=False):
     return spots.astype(float), running_sum.astype(float)
 
 
-def simulate_labels(spots, running_sum_before, day_index, params, paths, seed):
+def basket_importance_shift(active_spots, active_running_sum, day_index, params, chol):
+    m = future_count(day_index, params)
+    if not USE_IMPORTANCE_SAMPLING or m < MIN_IMPORTANCE_FUTURE_FIXINGS or len(active_spots) == 0:
+        return np.zeros(m * params.n_assets)
+    mean_avg, _ = final_average_moments(active_spots, active_running_sum, day_index, params)
+    standardized_gap = np.maximum((params.strike - mean_avg) / params.strike, 0.0)
+    tail_gap = float(np.quantile(standardized_gap, 0.70))
+    shift_strength = float(np.clip(0.10 + 1.20 * tail_gap, 0.10, 0.34))
+    basket_direction = np.mean(active_spots, axis=0)
+    basket_direction = basket_direction / max(float(np.linalg.norm(basket_direction)), 1e-12)
+    desired_correlated_shift = shift_strength * basket_direction
+    independent_shift = np.linalg.solve(chol, desired_correlated_shift)
+    step_weights = np.linspace(1.0, 0.55, m)
+    shift = (step_weights[:, None] * independent_shift[None, :]).reshape(-1)
+    norm = float(np.linalg.norm(shift))
+    if norm > MAX_IMPORTANCE_SHIFT_NORM:
+        shift *= MAX_IMPORTANCE_SHIFT_NORM / norm
+    return shift
+
+
+def simulate_labels(spots, running_sum_before, day_index, params, paths, seed, use_importance_sampling=True):
     spots = np.asarray(spots, dtype=float)
     running_sum_before = np.asarray(running_sum_before, dtype=float)
     count_states = len(spots)
@@ -265,6 +299,7 @@ def simulate_labels(spots, running_sum_before, day_index, params, paths, seed):
     if not np.any(active):
         return values, np.zeros_like(values)
     active_spots = spots[active]
+    active_running_sum = running_sum_before[active]
     active_current = current_sum[active]
     _, divs, vols = asset_setup(params)
     corr = correlation_matrix(params)
@@ -274,15 +309,24 @@ def simulate_labels(spots, running_sum_before, day_index, params, paths, seed):
     diffusion = vols * sqrt(dt)
     dimension = m * params.n_assets
     df = discount(day_index, params)
+    shift = (
+        basket_importance_shift(active_spots, active_running_sum, day_index, params, chol)
+        if use_importance_sampling
+        else np.zeros(dimension)
+    )
     for normals in sobol_batches(paths, dimension, seed, SIMULATION_BATCH_PATHS):
         batch = len(normals)
-        z = normals.reshape(batch, m, params.n_assets) @ chol.T
+        shifted = (np.arange(counts, counts + batch) % 2) == 1
+        proposal_normals = normals.copy()
+        proposal_normals[shifted] += shift
+        weights = mixture_likelihood_weight(proposal_normals, shift)
+        z = proposal_normals.reshape(batch, m, params.n_assets) @ chol.T
         increments = drift[None, None, :] + diffusion[None, None, :] * z
         growth = np.exp(np.cumsum(increments, axis=1))
         growth_sum = np.sum(growth, axis=1)
         future_sum = growth_sum @ active_spots.T / params.n_assets
         average = (active_current[None, :] + future_sum) / params.n_fixings
-        samples = df * payoff_from_average(average, params)
+        samples = df * payoff_from_average(average, params) * weights[:, None]
         values[active] += np.sum(samples, axis=0)
         values_sq[active] += np.sum(samples * samples, axis=0)
         counts += batch
@@ -569,6 +613,10 @@ def run():
                     "validation_states": VALIDATION_STATES,
                     "train_paths_per_state": train_paths,
                     "benchmark_paths_per_state": benchmark_paths,
+                    "importance_sampling_policy": (
+                        f"two-component Gaussian LR mixture when future_fixings >= {MIN_IMPORTANCE_FUTURE_FIXINGS}; "
+                        "plain Sobol otherwise"
+                    ),
                     "avg_train_stderr": float(np.mean(train_stderr)),
                     "avg_benchmark_stderr": float(np.mean(benchmark_stderr)),
                     **metrics,
@@ -600,8 +648,9 @@ def run():
         "",
         "Default method: `pchip_calibrated_log_factor_pca`.",
         "",
-        "Training labels use Sobol low-discrepancy paths and boundary-enriched state sampling.",
-        "This script does not yet use likelihood-ratio importance sampling for the path simulation measure.",
+        "Training labels use Sobol low-discrepancy paths, boundary-enriched state sampling,",
+        "and a true two-component Gaussian likelihood-ratio importance sampler when it reduces variance.",
+        f"Current IS policy: use LR mixture when future fixings >= {MIN_IMPORTANCE_FUTURE_FIXINGS}; plain Sobol otherwise.",
         f"Training state-scenarios per date are about {TRAIN_STATES * train_paths:,}.",
         f"Benchmark paths per validation state are {qmc_path_count(BENCHMARK_PATHS_PER_STATE):,}.",
         "",

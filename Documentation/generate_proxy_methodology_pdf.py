@@ -299,6 +299,12 @@ story.extend(
             "remains visible. Every theorem used by the implementation is restated there "
             "with assumptions, a proof or proof sketch, and its role in the code."
         ),
+        p(
+            "Appendix H is a mathematical audit of the implementation tricks. It states "
+            "the exact claim behind state enrichment, Sobol batching, PCA compression, "
+            "moment-matched basket baselines, ridge residual fitting, log-factor targets, "
+            "PCHIP residual calibration, relative-error floors, and exact payoff wings."
+        ),
         h2("Minimal prerequisites and notation"),
         table(
             [
@@ -499,12 +505,11 @@ p(z)/q_mix(z)
             "stabilizes rare positive payoffs near a global floor."
         ),
         p(
-            "The ten-asset basket Asian experiment below is different. It uses Sobol "
-            "low-discrepancy paths and deliberately enriched state sampling across "
-            "basket level, running sum, and PCA directions, but it does not yet use a "
-            "likelihood-ratio change of simulation measure. True importance sampling for "
-            "that product remains a planned improvement: shifted path draws would need "
-            "the exact density-ratio weight in every training label."
+            "The ten-asset basket Asian experiment uses both ideas. Its state design is "
+            "enriched across basket level, running sum, and PCA directions. Its path "
+            "generator also uses a true two-component Gaussian likelihood-ratio mixture "
+            "for the long-dated OTM slice where the shift reduced variance. Later fixing "
+            "dates use plain Sobol because the same shift increased weighted variance."
         ),
         PageBreak(),
     ]
@@ -1042,7 +1047,7 @@ E[S_i(t_a) S_k(t_b)]
         ),
         p(
             "Those moments define a moment-matched lognormal approximation. By itself it "
-            "is smooth and fast, but its day-0 worst max error was 20.477% on the "
+            "is smooth and fast, but its day-0 worst max error was 28.450% on the "
             "524,288-path benchmark, so it is used as a baseline rather than the final "
             "proxy."
         ),
@@ -1065,28 +1070,28 @@ E[S_i(t_a) S_k(t_b)]
         table(
             [
                 ["Method", "Worst max error", "Average p99", "Average MAE"],
-                ["Moment lognormal baseline", "20.477%", "4.878%", "0.014864"],
-                ["Relative residual sparse Chebyshev", "11.378%", "2.321%", "0.013642"],
-                ["Log-factor sparse Chebyshev", "9.187%", "1.955%", "0.009087"],
-                ["PCHIP-calibrated log factor", "6.530%", "1.560%", "0.007594"],
-                ["Raw residual sparse Chebyshev", "10.205%", "2.217%", "0.000489"],
-                ["Fixed residual/log-factor blend", "9.747%", "1.761%", "0.004266"],
+                ["Moment lognormal baseline", "28.450%", "5.947%", "0.023189"],
+                ["Relative residual sparse Chebyshev", "13.200%", "2.496%", "0.018653"],
+                ["Log-factor sparse Chebyshev", "8.995%", "1.996%", "0.012734"],
+                ["PCHIP-calibrated log factor", "5.873%", "1.820%", "0.009023"],
+                ["Raw residual sparse Chebyshev", "19.085%", "3.339%", "0.002380"],
+                ["Fixed residual/log-factor blend", "11.452%", "2.295%", "0.006251"],
             ],
             widths=[2.55 * inch, 1.35 * inch, 1.35 * inch, 1.35 * inch],
         ),
         p(
             "The default therefore meets the requested under-8% worst-error target on "
             "the tested state design. Training uses 513 states per date and 65,536 Sobol "
-            "paths per state, or about 33.6 million state-scenarios per date after the "
-            "power-of-two Sobol rounding. Each validation state uses 524,288 benchmark "
-            "paths."
+            "or Sobol/LR paths per state, or about 33.6 million state-scenarios per date "
+            "after the power-of-two Sobol rounding. Each validation state uses 524,288 "
+            "benchmark paths."
         ),
         p(
-            "Important sampling note: this basket Asian script uses Sobol paths and "
-            "tail-enriched state sampling, but it does not yet use likelihood-ratio "
-            "importance sampling in the path generator. A natural next experiment is to "
-            "shift the basket-growth factor toward the exercise boundary and weight each "
-            "path by the Gaussian density ratio proved in Appendix A.4."
+            "Importance-sampling note: the current script uses a two-component Gaussian "
+            "likelihood-ratio mixture for the long-dated day-0 slice, shifting basket "
+            "growth toward the exercise boundary and weighting each path by p/q. It uses "
+            "plain Sobol for later dates because the same shift increased weighted "
+            "variance there."
         ),
     ]
 )
@@ -1454,7 +1459,8 @@ story.extend(
         h2("Step 6: generate MC labels"),
         bullet("Use antithetic paths by default."),
         bullet("Add controls when exact expectations are available."),
-        bullet("Use likelihood-ratio shifts for rare payoff wings when the density-ratio weights are implemented."),
+        bullet("Attempt likelihood-ratio shifts for rare payoff wings whenever p/q is known and numerically stable."),
+        bullet("Keep the shift only on slices where the weighted estimator lowers variance or tail error."),
         bullet("Keep state-space enrichment distinct from true importance sampling in the run notes."),
         h2("Step 7: choose fitter by effective dimension"),
         table(
@@ -1540,7 +1546,8 @@ story.extend(
         bullet("Use the moment-matched lognormal value as a baseline, not as the final proxy."),
         bullet("Add PCA scores of log spots to represent cross-sectional composition."),
         bullet("Fit bounded sparse-Chebyshev corrections, then calibrate residual bias with PCHIP."),
-        bullet("Current script uses Sobol plus state enrichment; true likelihood-ratio IS is a planned extension."),
+        bullet("Use a Gaussian likelihood-ratio mixture for long-dated OTM slices when it lowers weighted variance."),
+        bullet("Fall back to plain Sobol on slices where the proposed shift increases variance."),
         PageBreak(),
         h1("15B. Exercise, barrier, and cliquet recipes"),
         h2("Recipe details: American put"),
@@ -1713,7 +1720,7 @@ story.extend(
                 ["Study", "Training", "Benchmark"],
                 ["European", "121 states x 25,000 shifted paths", "Black-Scholes closed form"],
                 ["Asian", "about 10M scenarios per fitted date", "500K paths/state + geometric control"],
-                ["10-asset basket Asian", "513 states x 65,536 paths/state", "524,288 paths/state"],
+                ["10-asset basket Asian", "513 states x 65,536 Sobol/LR paths/state", "524,288 Sobol/LR paths/state"],
                 ["GBM cliquet", "about 10M scenarios per fitted date", "500K paths/state + clipped-sum control"],
                 ["American", "10,006,700 one-step transitions", "4,000 x 2,000 projected FD grid"],
                 ["Barrier", "10M scenarios per fitted date", "500K paths/state + bridge survival"],
@@ -1726,7 +1733,7 @@ story.extend(
         h2("Known limitations"),
         bullet("Illustrative SLV leverage functions are not calibrated market surfaces."),
         bullet("SLV uses two Euler steps per monthly period in the current experiments."),
-        bullet("Basket Asian currently uses Sobol plus state enrichment, not likelihood-ratio IS."),
+        bullet("Basket Asian uses conditional LR mixture IS; it is deliberately off on dates where it raised variance."),
         bullet("Basket 5-8% control failed on untouched designs; adaptive enrichment remains research."),
         bullet("Pointwise price accuracy does not replace outer-scenario PFE quantile validation."),
         bullet("Production extrapolation, Greeks, and calibration loops require separate tests."),
@@ -1769,8 +1776,10 @@ story.extend(
             "For the ten-asset basket Asian, the successful generic pattern was different: "
             "use an analytically moment-matched low-fidelity baseline, summarize the "
             "remaining composition with PCA, fit a sparse Chebyshev log-factor correction, "
-            "and then use PCHIP as a one-dimensional residual calibrator. That fixed "
-            "default achieved 6.530% worst max error against 524,288-path benchmarks."
+            "and then use PCHIP as a one-dimensional residual calibrator. Conditional "
+            "LR mixture importance sampling improved the long-dated OTM slice. That "
+            "fixed default achieved 5.873% worst max error against 524,288-path "
+            "benchmarks."
         ),
         p(
             "Moment-residual Hermite, local, Nystrom Matern, weighted spectral, and fixed "
@@ -2226,7 +2235,247 @@ story.extend(
 
 story.extend(
     [
-        h1("Appendix H. Primary references"),
+        h1("Appendix H. Mathematical implementation tricks"),
+        p(
+            "This appendix turns the main implementation choices into mathematical "
+            "claims. The statements are intentionally compact; each proof explains why "
+            "the code transformation is valid, unbiased, stabilizing, or only a heuristic."
+        ),
+        h2("H.1 State enrichment is not importance sampling"),
+        theorem(
+            "Two Different Measures",
+            "Let x be the pricing state and Z the simulated path randomness. Choosing "
+            "more training states from a tail-focused state distribution nu_train changes "
+            "where labels are requested. It does not change the conditional expectation "
+            "inside any label. Importance sampling changes the simulation law for Z and "
+            "must include a density-ratio weight.",
+        ),
+        eq(
+            """
+State enrichment:
+    x_i ~ nu_train,
+    y_i = (1/N) sum_{n=1}^N h(x_i,Z_n),        Z_n ~ p_x.
+
+Likelihood-ratio importance sampling:
+    y_i = (1/N) sum_{n=1}^N h(x_i,Z_n) p_x(Z_n)/q_x(Z_n),
+    Z_n ~ q_x.
+"""
+        ),
+        proof(
+            "For a fixed state x, the target label is E_p[h(x,Z)]. Drawing more states "
+            "near a boundary only changes the empirical design measure used by the "
+            "regression. It leaves each label estimator as an average under p_x. If paths "
+            "are instead drawn from q_x, the expectation becomes E_q[h(x,Z)] unless the "
+            "likelihood ratio p_x/q_x is multiplied pathwise. Therefore state enrichment "
+            "improves coverage, while importance sampling improves rare-event label "
+            "variance; they are related but not the same operation."
+        ),
+        h2("H.2 Sobol power-of-two batching"),
+        theorem(
+            "Base-2 Digital-Net Balance",
+            "For a Sobol sequence in base 2, the first 2^m points form a digital net. "
+            "Elementary binary boxes of compatible volume receive nearly uniform counts. "
+            "Using powers of two therefore preserves the designed low-discrepancy balance "
+            "better than stopping at an arbitrary path count.",
+        ),
+        eq(
+            """
+Implementation rule:
+    N_target -> N_sobol = 2^{ceil(log_2 N_target)}.
+
+Training budget:
+    N_state * N_sobol paths.
+"""
+        ),
+        proof(
+            "Sobol points are constructed so that the first 2^m points fill binary "
+            "elementary intervals evenly according to the generator matrices. Truncating "
+            "at a non-power-of-two count cuts through this balanced block. Rounding up "
+            "keeps the full net and only increases work by less than a factor of two. "
+            "This is a numerical-design theorem, not a probabilistic unbiasedness claim."
+        ),
+        h2("H.3 PCA compression of basket composition"),
+        theorem(
+            "Best Linear k-Dimensional Reconstruction",
+            "Let R be the centered log-spot vector with covariance matrix Sigma. Among "
+            "all rank-k orthogonal projections P, the projection onto the eigenvectors "
+            "of Sigma with the k largest eigenvalues minimizes E[||R-PR||^2].",
+        ),
+        eq(
+            """
+Sigma u_j = lambda_j u_j,    lambda_1 >= ... >= lambda_d.
+
+P_k = U_k U_k',
+score_j = R' u_j,       j=1,...,k.
+"""
+        ),
+        proof(
+            "For any orthogonal projection P with rank k, the retained variance is "
+            "trace(P Sigma). Minimizing reconstruction error is equivalent to maximizing "
+            "this retained variance because E[||R-PR||^2]=trace(Sigma)-trace(P Sigma). "
+            "Rayleigh-Ritz gives the maximum trace as lambda_1+...+lambda_k, achieved by "
+            "the span of the top eigenvectors. The basket Asian proxy uses the first four "
+            "scores as a low-dimensional summary of relative basket composition."
+        ),
+        h2("H.4 Moment-matched lognormal baseline"),
+        theorem(
+            "Two-Moment Lognormal Match",
+            "If a positive random variable A has mean m>0 and variance v>=0, the "
+            "lognormal random variable exp(Y), Y~N(mu_L,s_L^2), with the same first two "
+            "moments is obtained from s_L^2=log(1+v/m^2) and "
+            "mu_L=log(m)-0.5 s_L^2.",
+        ),
+        eq(
+            """
+s_L^2 = log(1 + v/m^2),
+mu_L = log(m) - s_L^2/2.
+
+V_LN = exp(-r tau) [ m Phi(d_1) - K Phi(d_2) ],
+d_2 = (mu_L - log K)/s_L,
+d_1 = d_2 + s_L.
+"""
+        ),
+        proof(
+            "For Y~N(mu_L,s_L^2), E[exp(Y)]=exp(mu_L+s_L^2/2) and "
+            "Var(exp(Y))=exp(2 mu_L+s_L^2)(exp(s_L^2)-1). Setting the mean equal to m "
+            "gives exp(mu_L+s_L^2/2)=m. Dividing the variance equation by m^2 gives "
+            "v/m^2=exp(s_L^2)-1, hence the stated s_L^2 and mu_L. The option formula "
+            "then follows by the same truncated-lognormal calculation used in "
+            "Black-Scholes."
+        ),
+        h2("H.5 Ridge residual fitting"),
+        theorem(
+            "Ridge Normal Equations",
+            "Given design matrix X, target y, and positive penalty lambda, the "
+            "coefficient vector minimizing ||X beta-y||_2^2+lambda||beta||_2^2 is "
+            "beta=(X'X+lambda I)^{-1}X'y. If the intercept is unpenalized, set the first "
+            "diagonal penalty entry to zero.",
+        ),
+        eq(
+            """
+min_beta  ||X beta - y||_2^2 + beta' Lambda beta
+
+Gradient:
+    2 X'(X beta-y) + 2 Lambda beta = 0
+
+Solution:
+    beta = (X'X + Lambda)^{-1} X'y.
+"""
+        ),
+        proof(
+            "The objective is a convex quadratic. Differentiating with respect to beta "
+            "gives the displayed gradient. Setting it to zero yields the linear system. "
+            "Adding lambda I makes the system better conditioned and shrinks unstable "
+            "high-order basis coefficients. The code uses this for sparse Chebyshev and "
+            "residual corrections."
+        ),
+        h2("H.6 Bounded log-factor correction"),
+        theorem(
+            "Positive Multiplicative Correction",
+            "Let B(x)>=0 be a baseline price and eps>0. If a model fits "
+            "a(x)=log((V(x)+eps)/(B(x)+eps)), then the reconstructed price "
+            "V_hat(x)=(B(x)+eps) exp(a_hat(x))-eps is bounded below by -eps. Clipping at "
+            "zero gives a nonnegative price.",
+        ),
+        eq(
+            """
+a(x) = log( (V(x)+eps)/(B(x)+eps) )
+
+V_hat(x) = max( (B(x)+eps) exp(a_hat(x)) - eps, 0 ).
+"""
+        ),
+        proof(
+            "The exponential is strictly positive, so (B+eps) exp(a_hat) is positive. "
+            "Subtracting eps can only make the raw reconstruction larger than -eps. "
+            "The final maximum with zero enforces the no-negative-option-price condition. "
+            "Fitting a ratio rather than raw value lets the high-dimensional model learn "
+            "relative bias around a strong moment baseline."
+        ),
+        h2("H.7 PCHIP residual calibration"),
+        theorem(
+            "Conditional-Mean Residual Correction",
+            "Let M be a scalar summary feature and R=(V-g(X))/D(X) be a normalized "
+            "training residual for a preliminary proxy g and positive scale D. Among all "
+            "square-integrable functions c(M), the function c*(M)=E[R|M] minimizes "
+            "E[(R-c(M))^2].",
+        ),
+        eq(
+            """
+Preliminary proxy:     g(X)
+Normalized residual:   R = (V - g(X)) / D(X)
+Calibration function:  c*(m) = E[R | M=m]
+
+Corrected proxy:
+    V_cal(X) = max( g(X) + D(X) c_hat(M(X)), 0 ).
+"""
+        ),
+        proof(
+            "For any function c(M), condition on M. The conditional mean-square error is "
+            "E[(R-c(M))^2 | M]. For a fixed value M=m this is minimized by the scalar "
+            "mean E[R|M=m], because E[(R-a)^2|M=m]=Var(R|M=m)+(E[R|M=m]-a)^2. The code "
+            "estimates c* by binning residuals in expected-average moneyness and fitting "
+            "a PCHIP curve through the bin means. This is why the correction is a "
+            "mathematical residual projection, not a hand-drawn patch."
+        ),
+        h2("H.8 Relative-error floor"),
+        theorem(
+            "Stable Tail Error Denominator",
+            "For floor eta greater than zero, define e_rel=|V_hat-V|/max(|V|,eta). "
+            "If |V| is at least eta, this is ordinary relative error. If |V| is below "
+            "eta, then e_rel is bounded by |V_hat-V|/eta, so tiny "
+            "option prices cannot create unbounded percentages from economically tiny "
+            "absolute errors.",
+        ),
+        proof(
+            "The first case follows from max(|V|,eta)=|V|. In the second case the "
+            "denominator is eta, a fixed positive number. Thus the metric remains "
+            "sensitive to absolute tail misses while avoiding division by a number "
+            "arbitrarily close to zero."
+        ),
+        h2("H.9 Exact linear payoff wings"),
+        theorem(
+            "Positive-Part Removal",
+            "If a call payoff can be written (Y-K)_+ and the state implies Y is at least K "
+            "almost surely, then E[(Y-K)_+]=E[Y]-K. If the state implies Y is at most K, "
+            "then E[(Y-K)_+]=0.",
+        ),
+        proof(
+            "On the event Y is at least K, the positive part equals Y-K path by path. On "
+            "the event Y is at most K, it equals zero path by path. Taking expectations preserves these "
+            "identities. The scripts use this to avoid asking regressions to learn "
+            "regions where the price is exactly linear or exactly zero."
+        ),
+        h2("H.10 Sparse Chebyshev basis selection"),
+        theorem(
+            "Bounded Basis on a Scaled Domain",
+            "Chebyshev polynomials satisfy T_n(cos theta)=cos(n theta). Therefore "
+            "|T_n(z)| is at most one for z in [-1,1]. Scaling inputs to this interval keeps each "
+            "univariate basis column bounded before interactions are formed.",
+        ),
+        eq(
+            """
+Scale feature:
+    z_j = 2 (x_j - low_j)/(high_j-low_j) - 1.
+
+Sparse design:
+    1, T_1(z_j),...,T_p(z_j), selected z_i z_j, selected z_i z_j^2.
+"""
+        ),
+        proof(
+            "Every z in [-1,1] can be written z=cos theta for some theta in [0,pi]. "
+            "Then T_n(z)=cos(n theta), whose absolute value is at most one. The code uses "
+            "quantile scaling and clipping, so most training and validation features lie "
+            "inside or near this bounded interval. Sparse term selection is a bias-"
+            "variance tradeoff: it gives up full tensor expressiveness to avoid the "
+            "combinatorial explosion of all interactions."
+        ),
+        PageBreak(),
+    ]
+)
+
+story.extend(
+    [
+        h1("Appendix I. Primary references"),
         p(
             "These sources support the named theorems and numerical methods. The appendix "
             "statements are project-specific restatements, not copied quotations."

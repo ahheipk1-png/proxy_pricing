@@ -100,7 +100,8 @@ validation state.
 monthly arithmetic Asian call on an equal-weight 10-asset basket
 mixed positive and negative correlations
 state = 10 spots plus running sum of previous basket fixings
-Sobol MC labels and 524,288-path Sobol benchmarks per validation state
+Sobol MC labels with conditional likelihood-ratio mixture importance sampling
+524,288-path Sobol/LR benchmarks per validation state
 moment-matched lognormal baseline
 PCA sparse-Chebyshev log-factor correction
 PCHIP residual calibration as the default
