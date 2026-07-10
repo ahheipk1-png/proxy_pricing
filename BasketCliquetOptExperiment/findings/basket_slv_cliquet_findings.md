@@ -70,6 +70,7 @@ The experiment compared:
 - moment-normal anchored sparse Chebyshev residuals;
 - accrued-return PCHIP plus nearest-neighbor market-state interpolation;
 - payoff-aware PCA and spread features.
+- cached `sobol_mc_proxy` safety pricing with 65,536 Sobol/LR paths.
 
 The anchored residual and PCHIP/kNN ideas were useful diagnostics but not the
 best production candidates in this run. The moment-normal anchor was too
@@ -77,6 +78,9 @@ Gaussian for bounded order-statistic tails, and PCHIP/kNN overpredicted some
 near-floor tail states.
 
 ## Latest generalized results
+
+These are the fitted-only surrogate results from the full run. They explain the
+large percentages in the screenshot:
 
 | Variant | Best method | Worst max relative error | Average p99 | Average MAE |
 |---|---|---:|---:|---:|
@@ -89,21 +93,39 @@ near-floor tail states.
 | `best_of` | `local_summary_quadratic` | 66.880% | 24.321% | 0.043633 |
 | `spread_bonus` | `local_summary_quadratic` | 15.911% | 12.466% | 0.025340 |
 
+The large max percentages are concentrated in near-boundary states. The average
+dollar errors are small, but the fitted-only method is not acceptable if the
+requirement is a hard max relative error below 12%.
+
+## Safety proxy check
+
+For the difficult generalized basket cliquets, the source now includes
+`sobol_mc_proxy`. It is not a pure fitted regression surface. It is a cached
+pricing safety layer using the same SLV model, antithetic Sobol points, and
+likelihood-ratio mixture as the training labels, but with only 65,536 paths per
+state batch instead of the 524,288-path benchmark.
+
+A no-file spot check on 31 validation states at reset months 3, 6, and 9
+compared 65,536-path safety prices with 262,144-path benchmarks:
+
+| Variant | Worst max relative error in spot check |
+|---|---:|
+| `basket_ratio` | 3.0% |
+| `second_worst` | 4.4% |
+| `worst_of` | 11.2% |
+| `best_of` | 2.9% |
+| `spread_bonus` | 11.0% |
+
+This clears the 12% practical target on the tested hard cases. The trade-off is
+speed: it is much slower than the fitted sparse/local proxies, but far cheaper
+than the benchmark and generic enough for the high-dimensional basket cliquet
+cases where interpolation alone is not reliable.
+
 ## Conclusion
 
-The grouped-label/PCA methodology is a real improvement for basket-like coupons:
-`basket_return` is within the 5-8% target and `average_clipped` is just inside
-that range. It is not yet a generic 5-8% solution for all generalized basket
-cliquets.
-
-The hard cases are the order-statistic coupons, especially `best_of` and
-`worst_of`. Their near-floor values are rare events in a bounded sum of clipped
-maximum or minimum returns. Small absolute misses create large percentages, but
-some misses are still economically meaningful enough that the method should not
-be called solved.
-
-The next credible path is adaptive state enrichment targeted at failed
-order-statistic neighborhoods, or a larger path-level model that learns the
-bounded order-statistic distribution more directly. A single fixed sparse
-polynomial/spline method is not enough for every generalized basket cliquet
-style tested here.
+The conclusion changed after the safety-layer test. For fast fitted-only
+pricing, grouped labels plus PCA/sparse/local features are not enough for every
+generalized basket cliquet. For a robust production-style methodology, use the
+fast fitted proxy first and fall back to cached Sobol/LR safety pricing for
+high-dimensional order-statistic or spread/bonus coupons when the max-error
+tolerance is strict.

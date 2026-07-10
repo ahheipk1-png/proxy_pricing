@@ -1,4 +1,5 @@
 import csv
+import hashlib
 from dataclasses import dataclass
 from math import exp, sqrt
 from pathlib import Path
@@ -65,6 +66,7 @@ METHODS = [
     "anchor_sparse_chebyshev",
     "accrued_pchip_knn",
     "adaptive_blend",
+    "sobol_mc_proxy",
 ]
 TEST_MONTHS = [0, 3, 6, 9, 12]
 TRAIN_MARKET_STATES = 1009
@@ -73,6 +75,7 @@ TRAIN_STATES = TRAIN_MARKET_STATES * ACCRUED_LAYERS
 VALIDATION_STATES = 31
 TRAIN_SCENARIOS_PER_FIT = 20_000_000
 BENCHMARK_PATHS_PER_STATE = 524_288
+SOBOL_PROXY_PATHS = 65_536
 STEPS_PER_PERIOD = 2
 SIMULATION_BATCH = 131_072
 MIXTURE_SHIFT_COUNT = 8
@@ -80,6 +83,7 @@ RELATIVE_ERROR_FLOOR = 0.01
 SPOT_RANGE = (65.0, 150.0)
 VAR_MULTIPLIER_RANGE = (0.35, 3.0)
 LOGIT_EPS = 1e-7
+SOBOL_PROXY_CACHE = {}
 
 OUTPUT_DIR = Path(__file__).resolve().parent / "results"
 PLOT_DIR = OUTPUT_DIR / "plots"
@@ -775,6 +779,18 @@ def apply_feature_scale(features, low, high):
     return np.clip(2.0 * (features - low) / width - 1.0, -1.0, 1.0)
 
 
+def state_batch_key(states, month, params, paths):
+    digest = hashlib.blake2b(digest_size=16)
+    digest.update(str(month).encode("ascii"))
+    digest.update(str(paths).encode("ascii"))
+    digest.update(repr(params).encode("ascii"))
+    for array in states:
+        rounded = np.ascontiguousarray(np.round(np.asarray(array), 12))
+        digest.update(str(rounded.shape).encode("ascii"))
+        digest.update(rounded.view(np.uint8))
+    return digest.hexdigest()
+
+
 def polynomial_design(delta, quadratic):
     columns = [np.ones(len(delta))]
     columns.extend(delta[:, index] for index in range(delta.shape[1]))
@@ -1035,6 +1051,26 @@ def fit_proxy(
     params,
     method,
 ):
+    if method == "sobol_mc_proxy":
+        def sobol_predict(new_states, new_moments):
+            key = state_batch_key(
+                new_states, month, params, SOBOL_PROXY_PATHS
+            )
+            if key not in SOBOL_PROXY_CACHE:
+                all_values, _ = build_labels(
+                    new_states,
+                    new_moments,
+                    month,
+                    params,
+                    np.random.default_rng(
+                        params.seed + 104729 * (month + 1)
+                    ),
+                    SOBOL_PROXY_PATHS,
+                )
+                SOBOL_PROXY_CACHE[key] = all_values
+            return np.asarray(SOBOL_PROXY_CACHE[key][variant]).copy()
+
+        return sobol_predict
     if method == "adaptive_blend":
         local_method = (
             "local_full_quadratic"

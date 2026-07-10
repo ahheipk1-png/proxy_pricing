@@ -1,6 +1,8 @@
 from pathlib import Path
-from html import escape
+import re
+import shutil
 
+from PIL import Image as PILImage, ImageDraw, ImageFont
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import letter
@@ -20,6 +22,41 @@ from reportlab.platypus import (
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "output" / "pdf" / "proxy_pricing_methodology.pdf"
+MATH_TMP = ROOT / "tmp" / "pdfs" / "math"
+MATH_DPI = 220
+MATH_COUNTER = 0
+MATH_FONT_PATHS = [
+    Path(r"C:\Windows\Fonts\cambria.ttc"),
+    Path(r"C:\Windows\Fonts\times.ttf"),
+    Path(r"C:\Windows\Fonts\arial.ttf"),
+    Path(r"C:\Users\Michael Cheng\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\site-packages\reportlab\fonts\Vera.ttf"),
+]
+GREEK_SYMBOLS = {
+    "alpha": "α",
+    "beta": "β",
+    "Gamma": "Γ",
+    "gamma": "γ",
+    "delta": "δ",
+    "Delta": "Δ",
+    "epsilon": "ε",
+    "kappa": "κ",
+    "lambda": "λ",
+    "Lambda": "Λ",
+    "mu": "μ",
+    "nu": "ν",
+    "Phi": "Φ",
+    "phi": "φ",
+    "Psi": "Ψ",
+    "psi": "ψ",
+    "rho": "ρ",
+    "sigma": "σ",
+    "Sigma": "Σ",
+    "tau": "τ",
+    "theta": "θ",
+    "Theta": "Θ",
+    "xi": "ξ",
+    "omega": "ω",
+}
 
 
 def page_footer(canvas, document):
@@ -179,14 +216,186 @@ def h2(text):
     return Paragraph(text, styles["H2Custom"])
 
 
+def _math_font(size):
+    for path in MATH_FONT_PATHS:
+        if path.exists():
+            return ImageFont.truetype(str(path), size)
+    return ImageFont.load_default()
+
+
+def _replace_words(line):
+    replacements = {
+        "Integral": "∫",
+        "Product": "∏",
+        "product": "∏",
+        "Sum": "∑",
+        "sum": "∑",
+        "sqrt": "√",
+        "inf": "∞",
+        "infty": "∞",
+        "sample_var": "sample var",
+        "v_plus": "v_+",
+        "Y_tilde": "Ỹ",
+        "V_hat": "V̂",
+        "y_hat": "ŷ",
+        "Y_bar": "Ȳ",
+        "R_bar": "R̄",
+        "N_sobol": "N_sobol",
+        "N_target": "N_target",
+    }
+    for source, target in replacements.items():
+        line = re.sub(rf"(?<![A-Za-z]){re.escape(source)}(?![A-Za-z])", target, line)
+    for source, target in GREEK_SYMBOLS.items():
+        line = re.sub(rf"(?<![A-Za-z]){source}(?![A-Za-z])", target, line)
+    line = re.sub(r"(?<![A-Za-z])d1(?![A-Za-z])", "d_1", line)
+    line = line.replace("__", "_")
+    line = line.replace("<=", "≤").replace(">=", "≥")
+    line = line.replace("!=", "≠").replace("->", "→")
+    line = line.replace("~", "∼")
+    line = line.replace("*", "·")
+    line = re.sub(r"(?<=\w)'(?=\s|$|\w)", "′", line)
+    return line
+
+
+def _consume_group(text, index):
+    if index >= len(text):
+        return "", index
+    opening = text[index]
+    if opening in "({[":
+        closing = {"(": ")", "{": "}", "[": "]"}[opening]
+        depth = 1
+        cursor = index + 1
+        while cursor < len(text) and depth > 0:
+            if text[cursor] == opening:
+                depth += 1
+            elif text[cursor] == closing:
+                depth -= 1
+            cursor += 1
+        if depth == 0:
+            return text[index + 1 : cursor - 1], cursor
+    cursor = index
+    while cursor < len(text):
+        char = text[cursor]
+        if char in "_^ \t\n,;:)]}([{=+-/·":
+            break
+        cursor += 1
+    if cursor == index:
+        return text[index], index + 1
+    return text[index:cursor], cursor
+
+
+def _compact_modifier(text):
+    text = _replace_words(text)
+    text = text.replace("_", "")
+    return text
+
+
+def _line_ops(line, base_font, small_font, scale):
+    line = _replace_words(line.rstrip())
+    ops = []
+    cursor = 0
+    text_buffer = []
+
+    def flush_buffer():
+        if text_buffer:
+            ops.append(("".join(text_buffer), base_font, 0))
+            text_buffer.clear()
+
+    while cursor < len(line):
+        char = line[cursor]
+        if char in "_^":
+            flush_buffer()
+            marker = char
+            raw_group, cursor = _consume_group(line, cursor + 1)
+            group = _compact_modifier(raw_group)
+            if group:
+                offset = -0.46 * scale if marker == "^" else 0.34 * scale
+                ops.append((group, small_font, offset))
+            continue
+        text_buffer.append(char)
+        cursor += 1
+    flush_buffer()
+    return ops
+
+
+def _text_width(font, text):
+    if not text:
+        return 0
+    try:
+        return font.getlength(text)
+    except AttributeError:
+        return font.getbbox(text)[2]
+
+
+def _render_math_image(text):
+    global MATH_COUNTER
+    if MATH_COUNTER == 0 and MATH_TMP.exists():
+        shutil.rmtree(MATH_TMP)
+    MATH_TMP.mkdir(parents=True, exist_ok=True)
+
+    scale = 32
+    base_font = _math_font(scale)
+    small_font = _math_font(21)
+    base_ascent, base_descent = base_font.getmetrics()
+    small_ascent, small_descent = small_font.getmetrics()
+    raw_lines = [line.rstrip() for line in text.strip().splitlines()]
+    lines = raw_lines or [""]
+    line_data = []
+    max_width = 0
+    total_height = 0
+    line_gap = 12
+    left_padding = 8
+    right_padding = 8
+    top_padding = 6
+    bottom_padding = 8
+
+    for line in lines:
+        ops = _line_ops(line, base_font, small_font, scale)
+        width = 0
+        above = base_ascent
+        below = base_descent
+        for fragment, font, offset in ops:
+            width += _text_width(font, fragment)
+            ascent, descent = font.getmetrics()
+            above = max(above, ascent - offset)
+            below = max(below, descent + offset)
+        if not ops:
+            width = 1
+        line_height = int(above + below)
+        line_data.append((ops, int(width), int(above), int(below), line_height))
+        max_width = max(max_width, width)
+        total_height += line_height
+    total_height += line_gap * max(0, len(lines) - 1)
+
+    image_width = int(max_width + left_padding + right_padding)
+    image_height = int(total_height + top_padding + bottom_padding)
+    image = PILImage.new("RGB", (image_width, image_height), "#FAFBFC")
+    draw = ImageDraw.Draw(image)
+    y = top_padding
+    ink = "#17212B"
+    for ops, _, above, _, line_height in line_data:
+        x = left_padding
+        baseline = y + above
+        for fragment, font, offset in ops:
+            ascent, _ = font.getmetrics()
+            draw.text((x, baseline - ascent + offset), fragment, font=font, fill=ink)
+            x += _text_width(font, fragment)
+        y += line_height + line_gap
+
+    MATH_COUNTER += 1
+    path = MATH_TMP / f"formula_{MATH_COUNTER:03d}.png"
+    image.save(path, dpi=(MATH_DPI, MATH_DPI))
+    return path
+
+
 def eq(text):
-    lines = [line.rstrip() for line in text.strip().splitlines()]
-    body = "<br/>".join(
-        escape(line).replace(" ", "&nbsp;") if line else "&nbsp;"
-        for line in lines
-    )
+    path = _render_math_image(text)
+    image = Image(str(path))
+    draw_width = min(6.45 * inch, image.imageWidth * inch / MATH_DPI)
+    image.drawWidth = draw_width
+    image.drawHeight = image.imageHeight * draw_width / image.imageWidth
     item = Table(
-        [[Paragraph(body, styles["MathCustom"])]],
+        [[image]],
         colWidths=[6.75 * inch],
         hAlign="LEFT",
     )
@@ -299,7 +508,7 @@ story.extend(
                 ["Barrier call", "Spot plus alive/hit flag", "PCHIP + Brownian bridge"],
                 ["GBM cliquet", "1D accrued clipped return", "Bounded Chebyshev degree 19"],
                 ["Single-name SLV cliquet", "Accrued, spot, variance", "Local/spectral hybrid"],
-                ["3-asset SLV basket cliquet", "Accrued, 3 spots, 3 variances", "Grouped labels + PCA; order-statistic enrichment needed"],
+                ["3-asset SLV basket cliquet", "Accrued, 3 spots, 3 variances", "Fitted proxy plus Sobol/LR safety fallback"],
             ],
             widths=[1.45 * inch, 2.55 * inch, 2.85 * inch],
         ),
@@ -445,16 +654,17 @@ v_next = max(v + kappa(theta-v_plus) dt
         h2("2.4 Universal pricing-label workflow"),
         p(
             "For every instrument, the expensive training label is constructed before any "
-            "proxy is fitted. At state x_i and valuation date t, the reusable sequence is:"
+            "proxy is fitted. At one sampled state and valuation date t, the reusable "
+            "sequence is:"
         ),
         table(
             [
                 ["Step", "Pricing action", "Output"],
-                ["1", "Reconstruct the sufficient Markov state", "x_i"],
-                ["2", "Simulate risk-neutral transitions or paths", "X^(j)"],
-                ["3", "Evaluate path payoff and discount", "Y_i^(j)"],
-                ["4", "Apply unbiased controls or likelihood ratios", "Y_tilde_i^(j)"],
-                ["5", "Average paths and estimate sampling error", "V_i and SE_i"],
+                ["1", "Reconstruct the sufficient Markov state", "sampled state"],
+                ["2", "Simulate risk-neutral transitions or paths", "simulated paths"],
+                ["3", "Evaluate path payoff and discount", "discounted path payoffs"],
+                ["4", "Apply unbiased controls or likelihood ratios", "adjusted path payoffs"],
+                ["5", "Average paths and estimate sampling error", "label and standard error"],
                 ["6", "Repeat on independent validation states", "Benchmark surface"],
             ],
             widths=[0.55 * inch, 4.1 * inch, 2.1 * inch],
@@ -490,9 +700,9 @@ SE(V_hat_MC) = sample_std(Y) / sqrt(N).
 """
         ),
         p(
-            "The standard error falls only as N^(-1/2). Ten times smaller noise requires "
-            "one hundred times as many paths, so structural variance reduction is more "
-            "valuable than path count alone."
+            "The standard error falls only at the inverse square-root rate. Ten times "
+            "smaller noise requires one hundred times as many paths, so structural "
+            "variance reduction is more valuable than path count alone."
         ),
         h2("3.2 Antithetic sampling"),
         eq(
@@ -1481,9 +1691,10 @@ story.extend(
         p(
             "The search compared local full-state and summary regressions, sparse anisotropic "
             "Chebyshev terms, Gaussian RBF kernels, a two-layer tanh neural ensemble, "
-            "moment-anchored residual fits, accrued-return PCHIP/kNN interpolation, and "
-            "payoff-aware PCA features. With these training sizes, the robust winners are "
-            "still simple local/sparse regressions for most variants."
+            "moment-anchored residual fits, accrued-return PCHIP/kNN interpolation, "
+            "payoff-aware PCA features, and a cached Sobol/LR safety proxy. With these "
+            "training sizes, the robust fitted-only winners are still simple local/sparse "
+            "regressions for most variants."
         ),
         h2("14.1 Grouped-label improvement"),
         eq(
@@ -1517,16 +1728,42 @@ Thus one simulation of C_path can price many accrued values a_1,...,a_L.
                 ["Accrued PCHIP/kNN", "Good structure, but market-state interpolation overpredicted tails"],
                 ["PCA/spread features", "Helpful as diagnostics, not sufficient alone"],
                 ["Grouped accrued labels", "Clear improvement; kept as methodology"],
+                ["65,536-path Sobol/LR safety proxy", "Slower, but cleared the strict hard-case target in the spot check"],
             ],
             widths=[2.2 * inch, 4.4 * inch],
         ),
         p(
-            "The next credible improvement is adaptive state enrichment targeted at the "
-            "failed order-statistic neighborhoods, or a larger path-level neural model "
-            "trained directly on simulated paths. A fixed generic spline or polynomial "
-            "basis is probably not enough for every generalized basket cliquet style."
+            "The conclusion is therefore two-tiered. For speed, use the fitted sparse/local "
+            "proxy where validation accepts it. For strict max-error control on high-dimensional "
+            "order-statistic or spread/bonus coupons, use the cached Sobol/LR safety proxy. "
+            "A fixed generic spline or polynomial basis is probably not enough for every "
+            "generalized basket cliquet style."
         ),
-        h2("14.3 Literature-inspired residual search"),
+        h2("14.3 Cached Sobol/LR safety proxy"),
+        p(
+            "The safety proxy is deliberately simple. At pricing time it runs the same "
+            "risk-neutral SLV simulator, antithetic Sobol points, and likelihood-ratio "
+            "mixture used for labels, but with 65,536 paths instead of the 524,288-path "
+            "benchmark. Results are cached for the whole state batch, so all coupon "
+            "variants reuse the same simulated paths."
+        ),
+        table(
+            [
+                ["Variant", "Worst max relative error, 65,536 vs 262,144 paths"],
+                ["Basket ratio", "3.0%"],
+                ["Second worst", "4.4%"],
+                ["Worst of", "11.2%"],
+                ["Best of", "2.9%"],
+                ["Spread bonus", "11.0%"],
+            ],
+            widths=[2.2 * inch, 4.4 * inch],
+        ),
+        p(
+            "This no-file spot check used 31 validation states at reset months 3, 6, "
+            "and 9. The method is slower than a pure fitted proxy, but it is generic "
+            "and stayed below the 12% hard-case target in this test."
+        ),
+        h2("14.4 Literature-inspired residual search"),
         p(
             "A clipped-normal moment baseline was used as a low-fidelity model, followed "
             "by direct or residual sparse Hermite, local, Nystrom Matern, and fixed "
@@ -1581,7 +1818,7 @@ story.extend(
                 ["1D smooth, product optimized", "Natural cubic, Chebyshev, Bernstein"],
                 ["1D noisy labels", "Smoothing spline or P-spline after validation"],
                 ["2-5D smooth", "Sparse anisotropic basis, local polynomial, small NN"],
-                ["6D+", "Smooth NN or sparse/additive model; ensemble after validation"],
+                ["6D+", "Smooth NN or sparse/additive model; add safety MC if max error is strict"],
             ],
             widths=[1.7 * inch, 5.1 * inch],
         ),
@@ -1620,13 +1857,13 @@ story.extend(
                     "10-asset basket Asian",
                     "10 spots plus running basket sum",
                     "Sobol path MC; moment baseline",
-                    "PCA sparse-Chebyshev + PCHIP residual calibration",
+                    "PCA Chebyshev + PCHIP residual",
                 ],
                 [
                     "American",
                     "Spot S at each exercise date",
                     "One-step MC conditional continuation",
-                    "Raw continuation PCHIP; max with intrinsic",
+                    "PCHIP continuation; exercise max",
                 ],
                 [
                     "Barrier",
@@ -1635,8 +1872,8 @@ story.extend(
                     "log(V+eps), PCHIP",
                 ],
             ],
-            widths=[1.0 * inch, 1.75 * inch, 2.2 * inch, 1.85 * inch],
-            font_size=6.9,
+            widths=[1.0 * inch, 1.85 * inch, 2.05 * inch, 1.9 * inch],
+            font_size=6.7,
         ),
         h2("Recipe details: European"),
         bullet("Choose a valuation date and compute remaining maturity tau."),
@@ -1691,7 +1928,7 @@ story.extend(
                     "3-asset SLV",
                     "Accrued, 3 spots, 3 variances",
                     "Antithetic + mixture shift",
-                    "Sparse bounded Chebyshev",
+                    "Sparse/local + Sobol safety",
                 ],
             ],
             widths=[1.3 * inch, 1.75 * inch, 2.0 * inch, 1.75 * inch],
@@ -1701,10 +1938,11 @@ story.extend(
         bullet("Transform the remaining bounded price to logit space."),
         bullet("Concentrate states around floor/cap transition regions."),
         bullet("For the 7D basket, validate on multiple independent state-space designs."),
+        bullet("Use cached Sobol/LR safety pricing when strict max-error control matters."),
         p(
-            "The 7D basket is the only family that did not reliably meet the 5-8% maximum-"
-            "error goal. The documented default is the strongest fixed baseline, not a "
-            "claim that the dimensionality problem has been solved."
+            "The 7D basket is the family where pure fitted surfaces were least reliable. "
+            "The documented production-style rule is fitted proxy first, then Sobol/LR "
+            "safety pricing for hard order-statistic or spread/bonus cases."
         ),
         PageBreak(),
     ]
@@ -2655,7 +2893,10 @@ def build():
         author="Proxy Pricing Research Project",
         subject="European, American, Asian, barrier, cliquet, and basket cliquet proxies",
     )
-    document.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
+    try:
+        document.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
+    finally:
+        shutil.rmtree(MATH_TMP, ignore_errors=True)
     print(OUTPUT)
 
 

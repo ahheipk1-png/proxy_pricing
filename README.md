@@ -119,12 +119,16 @@ state = accrued return, 3 spots, and 3 variances
 grouped Sobol/LR labels across accrued-return layers
 8-component common/dispersion likelihood-ratio mixture
 PCA coordinates for log spots and log variances
-local, sparse Chebyshev, anchored residual, and accrued-PCHIP/kNN comparisons
+local, sparse Chebyshev, anchored residual, accrued-PCHIP/kNN comparisons
+cached 65,536-path Sobol/LR safety proxy for hard generalized coupons
 ```
 
-The latest basket cliquet result is mixed: grouped labels and PCA features bring
-`basket_return` to 6.448% worst max error and `average_clipped` to 7.967%, but
-order-statistic coupons remain above target.
+The fitted-only basket cliquet result is mixed: grouped labels and PCA features
+bring `basket_return` to 6.448% worst max error and `average_clipped` to
+7.967%, but some order-statistic coupons remain above target. The cached
+`sobol_mc_proxy` safety layer was added for those hard cases; in a 31-state
+month 3/6/9 spot check against 262,144-path benchmarks, the hard-case worst max
+errors were 3.0% to 11.2%.
 
 `OneDimensionalFitExperiment/ExpandedSplineStudy.py` compares 17 spline,
 local, spectral, rational, and kernel methods across 99 European, American,
