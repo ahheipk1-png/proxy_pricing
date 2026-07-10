@@ -11,6 +11,7 @@ python CliquetMain.py
 python SLVCliquetMain.py
 python AmericanMain.py
 python BarrierMain.py
+python BasketAsianMain.py
 python BasketCliquetMain.py
 python OneDimensionalFitExperiment/ExpandedSplineStudy.py
 ```
@@ -93,6 +94,21 @@ Zero-rebate knock-ins are obtained by in/out parity. The barrier study uses
 at least 10 million training scenarios per fitted date and 524,288 benchmark paths per
 validation state.
 
+`BasketAsianMain.py` runs the 10-underlying basket Asian study:
+
+```text
+monthly arithmetic Asian call on an equal-weight 10-asset basket
+mixed positive and negative correlations
+state = 10 spots plus running sum of previous basket fixings
+Sobol MC labels and 524,288-path Sobol benchmarks per validation state
+moment-matched lognormal baseline
+PCA sparse-Chebyshev log-factor correction
+PCHIP residual calibration as the default
+```
+
+It is standalone and does not import exploratory modules from any subfolder.
+The current default method is `pchip_calibrated_log_factor_pca`.
+
 `BasketCliquetMain.py` runs the three-underlying SLV basket cliquet study:
 
 ```text
@@ -116,6 +132,7 @@ CliquetOptExperiment/
 SLVCliquetOptExperiment/
 AmericanOptExperiment/
 BarrierOptExperiment/
+BasketAsianOptExperiment/
 BasketCliquetOptExperiment/
 OneDimensionalFitExperiment/
 ```
@@ -129,6 +146,7 @@ CliquetOptExperiment/default_run/cliquet_default_results.csv
 SLVCliquetOptExperiment/default_run/slv_cliquet_default_results.csv
 AmericanOptExperiment/default_run/american_default_results.csv
 BarrierOptExperiment/results/barrier_proxy_method_results.csv
+BasketAsianOptExperiment/results/basket_asian_proxy_method_results.csv
 BasketCliquetOptExperiment/results/basket_slv_cliquet_proxy_method_results.csv
 ```
 

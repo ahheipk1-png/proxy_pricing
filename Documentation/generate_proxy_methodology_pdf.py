@@ -235,7 +235,7 @@ story.extend(
         Paragraph("Monte Carlo Proxy Pricing", styles["TitleCustom"]),
         Paragraph(
             "A step-by-step methodology for European, American, Asian, barrier, cliquet, "
-            "SLV cliquet, and three-underlying basket cliquet instruments",
+            "ten-asset basket Asian, SLV cliquet, and basket cliquet instruments",
             styles["Subtitle"],
         ),
         Paragraph(
@@ -256,6 +256,11 @@ story.extend(
                 ["European call", "1D d1-like moneyness", "PCHIP default; Bernstein optimized"],
                 ["American put", "Spot and exercise time", "PCHIP continuation recursion"],
                 ["Arithmetic Asian", "1D adjusted moneyness after reduction", "PCHIP default; Akima optimized"],
+                [
+                    "10-asset basket Asian",
+                    "10 spots plus running basket sum",
+                    "Moment baseline + PCA sparse-Chebyshev correction",
+                ],
                 ["Barrier call", "Spot plus alive/hit flag", "PCHIP + Brownian bridge"],
                 ["GBM cliquet", "1D accrued clipped return", "Bounded Chebyshev degree 19"],
                 ["Single-name SLV cliquet", "Accrued, spot, variance", "Local/spectral hybrid"],
@@ -315,9 +320,9 @@ story.extend(
                 ["I", "Risk-neutral valuation, Monte Carlo labels, and variance reduction"],
                 ["II", "Target transforms, Chebyshev/Bernstein bases, PCHIP, Akima, Bezier"],
                 ["III", "European and Asian one-dimensional reductions"],
-                ["IV", "American optimal stopping and barrier options"],
+                ["IV", "Ten-asset basket Asian, American stopping, and barrier options"],
                 ["V", "Single-name cliquet and SLV extensions"],
-                ["VI", "Three-underlying SLV basket cliquet"],
+                ["VI", "Basket Asian and basket cliquet high-dimensional lessons"],
                 ["VII", "Generic high-dimensional workflow and validation checklist"],
                 ["Appendices", "Theorem statements, proofs, and references"],
             ],
@@ -476,9 +481,10 @@ E_p[H(Z)] = E_q[ H(Z) p(Z)/q(Z) ].
 """
         ),
         p(
-            "For multiple independent steps, log likelihoods add. The European and Asian "
-            "experiments shift normals toward the payoff boundary. SLV cliquets use a "
-            "defensive mixture: half unshifted and half shifted paths."
+            "For multiple independent steps, log likelihoods add. The European and "
+            "standalone one-dimensional Asian defaults use shifted terminal or path "
+            "normals where appropriate. SLV cliquets use a defensive mixture: half "
+            "unshifted and half shifted paths."
         ),
         eq(
             """
@@ -491,6 +497,14 @@ p(z)/q_mix(z)
         p(
             "The unshifted component protects central states; the shifted component "
             "stabilizes rare positive payoffs near a global floor."
+        ),
+        p(
+            "The ten-asset basket Asian experiment below is different. It uses Sobol "
+            "low-discrepancy paths and deliberately enriched state sampling across "
+            "basket level, running sum, and PCA directions, but it does not yet use a "
+            "likelihood-ratio change of simulation measure. True importance sampling for "
+            "that product remains a planned improvement: shifted path draws would need "
+            "the exact density-ratio weight in every training label."
         ),
         PageBreak(),
     ]
@@ -989,6 +1003,100 @@ add_plot(
 )
 story.append(PageBreak())
 
+# Basket Asian
+story.extend(
+    [
+        h1("9A. Ten-asset basket Asian extension"),
+        h2("9A.1 Contract and Markov state"),
+        p(
+            "The basket Asian experiment prices a monthly arithmetic Asian call on an "
+            "equal-weight basket of ten correlated GBM assets. Some pairwise correlations "
+            "are positive and some are negative. At fixing index j the state is the ten-"
+            "dimensional spot vector S=(S_1,...,S_10) plus the running sum B of previous "
+            "basket fixings."
+        ),
+        eq(
+            """
+b(S) = (S_1+...+S_10)/10
+
+Payoff = [ (B + b(S) + Sum_(k=1)^m b(S_(j+k)))/N - K ]_+.
+"""
+        ),
+        p(
+            "Unlike the single-asset GBM Asian, this cannot be reduced exactly to one "
+            "adjusted-moneyness coordinate because the ten assets have different "
+            "volatilities, dividends, and correlations. The feature design therefore "
+            "uses moment information plus PCA directions."
+        ),
+        h2("9A.2 Moment baseline"),
+        p(
+            "For each state the code computes the first two moments of the final "
+            "arithmetic basket average exactly under correlated GBM. The identity used is"
+        ),
+        eq(
+            """
+E[S_i(t_a) S_k(t_b)]
+= S_i S_k exp(mu_i t_a + mu_k t_b
+              + rho_ik sigma_i sigma_k min(t_a,t_b)).
+"""
+        ),
+        p(
+            "Those moments define a moment-matched lognormal approximation. By itself it "
+            "is smooth and fast, but its day-0 worst max error was 20.477% on the "
+            "524,288-path benchmark, so it is used as a baseline rather than the final "
+            "proxy."
+        ),
+        h2("9A.3 PCA sparse-Chebyshev correction"),
+        p(
+            "The correction features are log expected-average moneyness, effective "
+            "average volatility, current basket moneyness, running-average moneyness, "
+            "cross-sectional dispersion, four principal-component scores of log spots, "
+            "and log(1+baseline value). A sparse Chebyshev ridge model is fitted to a "
+            "bounded log-factor correction around the moment baseline."
+        ),
+        p(
+            "The final default adds a one-dimensional PCHIP calibration of the training "
+            "residual as a function of expected-average moneyness. This is not an ad hoc "
+            "hand correction: it is a second-stage smoother trained only on Monte Carlo "
+            "labels, and it addresses the common situation where a global high-dimensional "
+            "basis has small but systematic tail bias."
+        ),
+        h2("9A.4 Basket Asian result"),
+        table(
+            [
+                ["Method", "Worst max error", "Average p99", "Average MAE"],
+                ["Moment lognormal baseline", "20.477%", "4.878%", "0.014864"],
+                ["Relative residual sparse Chebyshev", "11.378%", "2.321%", "0.013642"],
+                ["Log-factor sparse Chebyshev", "9.187%", "1.955%", "0.009087"],
+                ["PCHIP-calibrated log factor", "6.530%", "1.560%", "0.007594"],
+                ["Raw residual sparse Chebyshev", "10.205%", "2.217%", "0.000489"],
+                ["Fixed residual/log-factor blend", "9.747%", "1.761%", "0.004266"],
+            ],
+            widths=[2.55 * inch, 1.35 * inch, 1.35 * inch, 1.35 * inch],
+        ),
+        p(
+            "The default therefore meets the requested under-8% worst-error target on "
+            "the tested state design. Training uses 513 states per date and 65,536 Sobol "
+            "paths per state, or about 33.6 million state-scenarios per date after the "
+            "power-of-two Sobol rounding. Each validation state uses 524,288 benchmark "
+            "paths."
+        ),
+        p(
+            "Important sampling note: this basket Asian script uses Sobol paths and "
+            "tail-enriched state sampling, but it does not yet use likelihood-ratio "
+            "importance sampling in the path generator. A natural next experiment is to "
+            "shift the basket-growth factor toward the exercise boundary and weight each "
+            "path by the Gaussian density ratio proved in Appendix A.4."
+        ),
+    ]
+)
+add_plot(
+    story,
+    "BasketAsianOptExperiment/results/plots/basket_asian_day_00_pchip_calibrated_log_factor_pca.png",
+    "Ten-asset basket Asian day-0 diagnostic using the PCHIP-calibrated sparse proxy.",
+)
+story.append(PageBreak())
+
 # American
 story.extend(
     [
@@ -1346,7 +1454,8 @@ story.extend(
         h2("Step 6: generate MC labels"),
         bullet("Use antithetic paths by default."),
         bullet("Add controls when exact expectations are available."),
-        bullet("Use likelihood-ratio shifts for rare payoff wings."),
+        bullet("Use likelihood-ratio shifts for rare payoff wings when the density-ratio weights are implemented."),
+        bullet("Keep state-space enrichment distinct from true importance sampling in the run notes."),
         h2("Step 7: choose fitter by effective dimension"),
         table(
             [
@@ -1392,6 +1501,12 @@ story.extend(
                     "log(V/S) and log(time/S), PCHIP",
                 ],
                 [
+                    "10-asset basket Asian",
+                    "10 spots plus running basket sum",
+                    "Sobol path MC; moment baseline",
+                    "PCA sparse-Chebyshev + PCHIP residual calibration",
+                ],
+                [
                     "American",
                     "Spot S at each exercise date",
                     "One-step MC conditional continuation",
@@ -1419,6 +1534,13 @@ story.extend(
         bullet("Use antithetics, likelihood shifting, and the exact geometric Asian control."),
         bullet("Fit normalized value and time value; use the exact linear wing."),
         bullet("Validate with 500,000 independent paths per state."),
+        h2("Recipe details: ten-asset basket Asian"),
+        bullet("Store all ten spots and the running sum of previous equal-weight basket fixings."),
+        bullet("Compute exact first and second moments of the final arithmetic basket average."),
+        bullet("Use the moment-matched lognormal value as a baseline, not as the final proxy."),
+        bullet("Add PCA scores of log spots to represent cross-sectional composition."),
+        bullet("Fit bounded sparse-Chebyshev corrections, then calibrate residual bias with PCHIP."),
+        bullet("Current script uses Sobol plus state enrichment; true likelihood-ratio IS is a planned extension."),
         PageBreak(),
         h1("15B. Exercise, barrier, and cliquet recipes"),
         h2("Recipe details: American put"),
@@ -1569,6 +1691,7 @@ story.extend(
                 ["Purpose", "Entry point or folder"],
                 ["European default", "EuroMain.py"],
                 ["Asian default", "AsianMain.py"],
+                ["10-asset basket Asian", "BasketAsianMain.py"],
                 ["Barrier research/default", "BarrierOptExperiment/BarrierMain.py"],
                 ["GBM cliquet default", "CliquetMain.py"],
                 ["American put default", "AmericanMain.py"],
@@ -1590,6 +1713,7 @@ story.extend(
                 ["Study", "Training", "Benchmark"],
                 ["European", "121 states x 25,000 shifted paths", "Black-Scholes closed form"],
                 ["Asian", "about 10M scenarios per fitted date", "500K paths/state + geometric control"],
+                ["10-asset basket Asian", "513 states x 65,536 paths/state", "524,288 paths/state"],
                 ["GBM cliquet", "about 10M scenarios per fitted date", "500K paths/state + clipped-sum control"],
                 ["American", "10,006,700 one-step transitions", "4,000 x 2,000 projected FD grid"],
                 ["Barrier", "10M scenarios per fitted date", "500K paths/state + bridge survival"],
@@ -1602,6 +1726,7 @@ story.extend(
         h2("Known limitations"),
         bullet("Illustrative SLV leverage functions are not calibrated market surfaces."),
         bullet("SLV uses two Euler steps per monthly period in the current experiments."),
+        bullet("Basket Asian currently uses Sobol plus state enrichment, not likelihood-ratio IS."),
         bullet("Basket 5-8% control failed on untouched designs; adaptive enrichment remains research."),
         bullet("Pointwise price accuracy does not replace outer-scenario PFE quantile validation."),
         bullet("Production extrapolation, Greeks, and calibration loops require separate tests."),
@@ -1639,6 +1764,13 @@ story.extend(
             "strongest generic baseline, but three independent state designs showed that "
             "the 10M-path budget did not guarantee the 5-8% target. Robust worst errors "
             "were approximately 18.5%, 11.6%, and 9.9%."
+        ),
+        p(
+            "For the ten-asset basket Asian, the successful generic pattern was different: "
+            "use an analytically moment-matched low-fidelity baseline, summarize the "
+            "remaining composition with PCA, fit a sparse Chebyshev log-factor correction, "
+            "and then use PCHIP as a one-dimensional residual calibrator. That fixed "
+            "default achieved 6.530% worst max error against 524,288-path benchmarks."
         ),
         p(
             "Moment-residual Hermite, local, Nystrom Matern, weighted spectral, and fixed "
@@ -1799,6 +1931,23 @@ story.extend(
             "P=Phi(d2). Completing the square inside the first normal integral shifts the "
             "threshold by sigma sqrt(tau), giving E[S_T 1]=S exp((r-q)tau)Phi(d1). "
             "Discounting produces the formula."
+        ),
+        h2("B.5 Correlated GBM second moment"),
+        theorem(
+            "Two-Asset GBM Moment",
+            "Let S_i(t)=S_i(0) exp(mu_i t+sigma_i W_i(t)) with "
+            "Corr(dW_i,dW_k)=rho_ik. Then "
+            "E[S_i(t_a)S_k(t_b)]=S_i(0)S_k(0) exp(mu_i t_a+mu_k t_b+"
+            "rho_ik sigma_i sigma_k min(t_a,t_b)).",
+        ),
+        proof(
+            "The product equals S_i(0)S_k(0) times the exponential of a normal variable "
+            "X=mu_i t_a+mu_k t_b+sigma_i W_i(t_a)+sigma_k W_k(t_b). Its variance is "
+            "sigma_i^2 t_a+sigma_k^2 t_b+2 rho_ik sigma_i sigma_k min(t_a,t_b). "
+            "For normal X, E[exp(X)]=exp(E[X]+0.5 Var(X)). In the risk-neutral GBM "
+            "parameterization the log drift mu_l already includes -0.5 sigma_l^2, so "
+            "the two single-asset 0.5 variance terms cancel those drift corrections, "
+            "leaving exactly the cross term shown above."
         ),
         PageBreak(),
     ]
