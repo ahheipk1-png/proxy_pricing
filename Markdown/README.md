@@ -254,13 +254,16 @@ output/pdf/proxy_pricing_methodology.pdf
 ```
 
 The guide is written as a LaTeX textbook for a second-year undergraduate with
-calculus, probability, and linear algebra. Its 25 pages include:
+calculus, probability, and linear algebra. Its 47 physical pages include
+40 numbered body pages plus front matter, with:
 
 ```text
+risk-neutral valuation, state sufficiency, and error decomposition
 risk-neutral pricing and Monte Carlo label construction
-step-by-step proxy recipes for every instrument
-complete PCHIP and sparse Chebyshev algorithms
-line-by-line proof appendices for the main formulas
+Sobol path generation, antithetics, control variates, and LR mixture IS
+step-by-step proxy recipes and implementation algorithms for every instrument
+complete PCHIP and sparse Chebyshev construction details
+line-by-line proof appendices for the main formulas and theorem statements
 primary academic references
 ```
 

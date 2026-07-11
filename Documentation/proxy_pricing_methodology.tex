@@ -61,6 +61,30 @@ The main chapters explain the workflow. The appendices give line-by-line proofs 
   \item a numerical approximation whose error must be validated.
 \end{itemize}
 
+\chapter*{Notation and Conventions}
+\addcontentsline{toc}{chapter}{Notation and Conventions}
+The same notation is used throughout the document.
+\begin{longtable}{@{}p{0.22\linewidth}p{0.72\linewidth}@{}}
+\toprule
+Symbol & Meaning\\
+\midrule
+\(S_t\) & Spot price at time \(t\). For baskets, \(S_t^{(j)}\) is asset \(j\).\\
+\(r,q,\sigma\) & Risk-free rate, dividend yield, and volatility in GBM examples.\\
+\(\tau\) & Remaining time to maturity, usually \(T-t\).\\
+\(H\) & Final payoff or discounted cash-flow functional before discounting.\\
+\(V(t,x)\) & Model value at time \(t\) when the pricing state is \(x\).\\
+\(X_t\) & State vector used by the proxy.\\
+\(Z\) & Standard-normal simulation shocks after inverse-CDF mapping from Sobol points.\\
+\(N\) & Number of Monte Carlo paths or number of fixings, depending on context. The surrounding formula identifies which one.\\
+\(A_i,R_i,a_i\) & Running sums: Asian running sum, basket running sum, and cliquet accrued return.\\
+\(\ell,u\) & Local floor and cap for a cliquet coupon.\\
+\(G_L,G_U\) & Global floor and cap for a cliquet payoff.\\
+\(\eta\) & Relative-error denominator floor.\\
+\bottomrule
+\end{longtable}
+
+All prices in the experiments are model prices. If the simulator is GBM, SLV, or a tree, the proxy is judged against that model. A proxy can be accurate relative to the model and the model can still be a poor market model. The two questions are deliberately separated.
+
 \mainmatter
 
 \chapter{The Pricing Problem}
@@ -146,6 +170,40 @@ The paired payoff
 \]
 has the same expectation as \(f(Z)\). It often has lower variance for monotone or nearly monotone payoffs.
 
+\section{Default simulation policy}
+The default policy used by the project is:
+\begin{enumerate}
+  \item Use Sobol low-discrepancy points whenever the path dimension is known in advance.
+  \item Use antithetic pairing when the payoff simulator accepts both \(Z\) and \(-Z\).
+  \item Use a likelihood-ratio shift or shift mixture for tail-sensitive labels whenever a useful direction is available.
+  \item Use the unshifted component as part of the mixture unless a closed-form variance calculation says a pure shift is safe.
+  \item Use independent randomization or independent Sobol scrambles for benchmarks.
+\end{enumerate}
+The phrase ``whenever possible'' matters. For example, if a payoff is synthetic and the useful tail direction is unknown, the safe choice is a mixture containing negative, zero, and positive shifts. If a benchmark uses a finite-difference or tree method, no MC importance sampling is needed because there is no path simulation in that benchmark.
+
+\section{From Sobol uniforms to GBM paths}
+For a \(d\)-asset GBM model over one step \(\Delta t\), start with a Sobol vector
+\[
+  U=(U_1,\ldots,U_d)\in(0,1)^d.
+\]
+Map it to independent normals by
+\[
+  Z_i=\Phi^{-1}(U_i).
+\]
+If \(L\) is a Cholesky factor of the correlation matrix \(\rho\), so that \(LL^\top=\rho\), set
+\[
+  \widetilde Z=LZ.
+\]
+Then the simulated next spot is
+\[
+  S_{t+\Delta t}^{(j)}
+  =
+  S_t^{(j)}
+  \exp\!\left((r-q_j-\tfrac12\sigma_j^2)\Delta t
+       +\sigma_j\sqrt{\Delta t}\,\widetilde Z_j\right).
+\]
+For a path with many dates, repeat this step date by date. The Brownian increments are independent across time before correlation is applied across assets.
+
 \section{Likelihood-ratio importance sampling}
 State enrichment and importance sampling are different.
 
@@ -164,6 +222,26 @@ For a normal mean shift, \(q(z)=\phi(z-\theta)\), so
   \exp\!\left(-\theta z+\frac12\theta^2\right).
 \]
 This identity is exact; its usefulness depends on variance.
+
+\section{Mixture importance sampling}
+A single shift can be too opinionated. The more generic tail-biased method is a mixture:
+\[
+  q(z)=\sum_{m=1}^M \pi_m \phi_d(z-\theta_m),
+  \qquad
+  \pi_m>0,\quad \sum_{m=1}^M\pi_m=1.
+\]
+Here \(\phi_d\) is the \(d\)-dimensional standard normal density and \(\theta_m\) is a vector shift. The likelihood ratio is
+\[
+  L(z)=\frac{\phi_d(z)}{\sum_{m=1}^M\pi_m\phi_d(z-\theta_m)}.
+\]
+The weighted estimator is
+\[
+  \widehat V_{\rm IS}
+  =
+  \frac1N\sum_{n=1}^N h(Z_n)L(Z_n),
+  \qquad Z_n\sim q.
+\]
+For option training, mixture shifts are useful because one model can include lower-tail, upper-tail, and central scenarios without needing a different formula for every product. The cost is that likelihood weights can become variable; therefore the code tracks benchmark error and avoids using an aggressive shift as the only source of paths.
 
 \section{Control variates}
 If \(C\) has known mean \(m_C\), then
@@ -232,6 +310,30 @@ H_i(t)
 \]
 PCHIP chooses slopes \(d_i\) from neighboring secants in a way that prevents artificial extrema.
 
+\section{PCHIP slope construction}
+Let
+\[
+  \delta_i=\frac{y_{i+1}-y_i}{x_{i+1}-x_i}
+\]
+be the secant slope. At an interior knot \(x_i\), PCHIP applies this rule.
+\begin{itemize}
+  \item If \(\delta_{i-1}\delta_i\le0\), set \(d_i=0\). This prevents a spurious turn at a sign change.
+  \item If \(\delta_{i-1}\) and \(\delta_i\) have the same sign, set
+  \[
+    d_i=
+    \frac{w_1+w_2}{w_1/\delta_{i-1}+w_2/\delta_i},
+    \qquad
+    w_1=2h_i+h_{i-1},\quad
+    w_2=h_i+2h_{i-1}.
+  \]
+\end{itemize}
+The second formula is a weighted harmonic mean. A harmonic mean is pulled toward the smaller magnitude, which stops the interpolant from using a large slope to overshoot a flat part of the curve.
+
+Endpoint slopes use one-sided information and are then clipped to respect the first interior secant. This is why SciPy's \texttt{PchipInterpolator} is preferred in the main code: it gives a mature, tested implementation of the Fritsch-Butland endpoint and interior rules.
+
+\section{Why exact interpolation is acceptable}
+PCHIP interpolates labels exactly, so it is not a smoother. That is acceptable only when MC noise is already controlled by Sobol paths, antithetics, control variates, and enough paths. If labels are visibly noisy, a smoothing spline or local regression can have lower average error. The project therefore uses PCHIP as the default one-feature method but still treats label construction as the first-order accuracy problem.
+
 \section{Akima, splines, and Bernstein}
 Akima interpolation is also local and robust to outliers. Natural cubic splines are smoother but can overshoot. Bernstein polynomials are shape-friendly on bounded intervals and were competitive for some barrier variants. For one-dimensional production defaults, the current rule is:
 \[
@@ -260,10 +362,50 @@ The normal equation is
   (A^\top A+\lambda\Gamma^\top\Gamma)\beta=A^\top y.
 \]
 
+\section{Sparse multi-index basis}
+For a \(D\)-dimensional state \(z=(z_1,\ldots,z_D)\in[-1,1]^D\), a tensor Chebyshev basis term is
+\[
+  \Phi_\alpha(z)=\prod_{j=1}^D T_{\alpha_j}(z_j),
+  \qquad
+  \alpha=(\alpha_1,\ldots,\alpha_D).
+\]
+A full tensor basis with \(\alpha_j\le p\) is usually too large. A total-degree basis keeps only
+\[
+  |\alpha|_1=\alpha_1+\cdots+\alpha_D\le p.
+\]
+The implementation also allows payoff-aware pruning. For example, a basket Asian correction keeps level, dispersion, running-sum, and a few PCA interaction terms before it considers high-order cross-products. This is not a pricing theorem; it is a bias-variance decision that must be checked by validation.
+
+\section{Baseline plus residual}
+High-dimensional products are easier to fit when the proxy is not asked to learn the whole price from scratch. The generic decomposition is
+\[
+  V(x)=B(x)\,R(x),
+\]
+or, with an additive residual,
+\[
+  V(x)=B(x)+\varepsilon_{\rm res}(x).
+\]
+Here \(B(x)\) is a cheap baseline: Black-Scholes, moment-matched lognormal, intrinsic value plus discounted floor, or a low-dimensional approximation. The fitted target can then be
+\[
+  y(x)=\log\frac{V(x)+\epsilon}{B(x)+\epsilon}.
+\]
+When \(B\) captures most of the shape, the residual is flatter and lower dimensional. This is the main reason the basket Asian and basket cliquet proxies improved after adding moment, PCA, and grouped-label features.
+
 \section{Why sparsity is necessary}
 A full tensor degree-\(p\) basis in \(D\) variables contains \((p+1)^D\) terms. With \(D=7\) and \(p=5\), that is \(279{,}936\) terms before fitting. Basket cliquet therefore needs sparse terms, payoff-aware features, or a slower safety method.
 
 \chapter{Instrument Recipes}
+
+\section{Recipe template}
+Each product section answers the same six questions:
+\begin{enumerate}
+  \item What is the payoff?
+  \item What state is sufficient for future cash flows?
+  \item Which coordinate is used by the proxy?
+  \item How are MC labels generated?
+  \item What benchmark is used?
+  \item Which parts are exact identities and which parts are fitted approximations?
+\end{enumerate}
+This template is important because a proxy can look accurate for the wrong reason. For example, reusing training paths in the benchmark can hide error, and using a coordinate that is not sufficient can look fine on a small grid but fail when parameters change.
 
 \section{European option}
 State: \(S\). Coordinate:
@@ -275,6 +417,8 @@ Training labels use shifted Sobol terminal GBM paths. Validation uses Black-Scho
   C=S e^{-q\tau}\Phi(d_1)-K e^{-r\tau}\Phi(d_2),\qquad d_2=d_1-\sigma\sqrt{\tau}.
 \]
 Default proxy: log price fitted by PCHIP in \(d_1\).
+
+Exact parts: the terminal GBM formula and the Black-Scholes benchmark. Fitted part: the interpolation from finitely many noisy labels. Main failure mode: tiny option values can make raw percentage error unstable, so validation reports both signed price error and relative error with a floor.
 
 \section{Arithmetic Asian option}
 State: \(S\) and running sum \(A\). With \(m\) future fixings and total \(N\),
@@ -289,8 +433,12 @@ The call payoff can be rewritten as
 \]
 Thus the tested monthly call can be represented by an adjusted-moneyness coordinate. Training uses Sobol antithetics, likelihood shifts where useful, and a geometric Asian control variate.
 
+Exact parts: the payoff rewrite and deterministic in-the-money or out-of-the-money regions. Unbiased parts: Sobol randomized labels, antithetics, and likelihood weights. Approximate parts: using a one-dimensional adjusted-moneyness fit for the tested family and using MC for the arithmetic-average benchmark.
+
 \section{Ten-asset basket Asian}
 State: ten spots plus the running basket sum. The proxy starts from a moment-matched lognormal baseline for the final arithmetic basket average, then fits a sparse Chebyshev/PCA correction and a PCHIP residual calibration. PCA summarizes cross-sectional composition without throwing away the level and running-sum information.
+
+Exact parts: first and second basket moments under GBM. Approximate parts: the lognormal moment match and the sparse residual proxy. The moment match is not expected to be exact because an arithmetic basket average is a sum of correlated lognormal variables, and that sum is not lognormal.
 
 \section{American and Bermudan options}
 At each exercise date \(k\),
@@ -298,6 +446,8 @@ At each exercise date \(k\),
   V_k(S)=\max\!\left(g_k(S),\,e^{-r\Delta t}\E[V_{k+1}(S_{k+1})\mid S_k=S]\right).
 \]
 The continuation value is estimated by one-step Sobol transitions and fitted with PCHIP. The max with intrinsic value is imposed exactly.
+
+Exact parts: dynamic-programming recursion and the exercise max. Approximate parts: finite exercise grid for Bermudan/American discretization, MC continuation labels, and interpolation of continuation. Benchmarks use a tree or projected finite-difference method to avoid testing the proxy against itself.
 
 \section{Barrier option}
 For a zero-rebate barrier,
@@ -309,13 +459,197 @@ Discrete monitoring checks simulated observation dates. Continuous monitoring us
   P(\text{survive}\mid x,y)=1-\exp\!\left(-\frac{2(x-b)(y-b)}{\sigma^2\Delta t}\right).
 \]
 
+Exact parts: discrete barrier path payoff and in/out parity. Conditional part: the Brownian-bridge survival probability is exact for continuous monitoring under log-GBM between two fixed endpoints. Approximate parts: MC integration and interpolation across spot.
+
 \section{Cliquet and SLV cliquet}
 Cliquet payoffs are bounded by local and global caps/floors. If accrued value \(a\) and \(m\) remaining coupons imply the final total is certainly below the global floor or above the global cap, the value is exact.
 
 For single-name SLV cliquet, the state is \((a,S,v)\). The proxy uses exact tails, bounded-logit targets, and local/sparse Chebyshev features. For three-asset basket cliquet, the fitted proxy is not universally enough for strict max-error control; hard order-statistic cases use a cached Sobol/LR safety proxy.
 
+Exact parts: local coupon clipping, global floor/cap clipping, and tail bounds. Approximate parts: SLV time stepping, sparse fitted surfaces, and any cached MC safety proxy. The safety proxy is slower than a closed-form fitted proxy, but it is still much faster than regenerating a full benchmark for every repeated query.
+
 \section{Autocallable and random payoff}
 Autocallable valuation is naturally date-indexed. The state is spot at an observation date; the cash-flow rule determines whether the note redeems early or continues. Random payoff tests are synthetic one-dimensional payoffs used to stress interpolation under different shapes.
+
+Exact parts: the call/no-call cash-flow rule at an observation date. Approximate parts: continuation labels and interpolation. The synthetic random payoff tests are not financial products; they are diagnostic shapes used to catch overshoot, poor extrapolation, and kink handling.
+
+\chapter{Contract Definitions and Payoff Algebra}
+
+\section{European call and put}
+For a call and put with strike \(K\),
+\[
+  H_{\rm call}=(S_T-K)_+,\qquad
+  H_{\rm put}=(K-S_T)_+.
+\]
+The proxy problem is one-dimensional because, under constant-parameter GBM, all future uncertainty depends on the current state only through the current spot \(S_t\). In practice the coordinate \(d_1\), rather than raw spot, is preferred because equal spacing in \(d_1\) allocates nodes by option delta rather than by currency units of spot.
+
+\section{Arithmetic Asian call}
+Let \(0=t_0<t_1<\cdots<t_{N-1}=T\) be fixing dates. At valuation date \(t_i\), let
+\[
+  A_i=\sum_{j=0}^{i-1} S_{t_j}
+\]
+be the running sum before today's fixing. If today's spot is \(S\), then the final arithmetic average is
+\[
+  \bar S_T=\frac{A_i+S+\sum_{k=i+1}^{N-1}S_{t_k}}{N}.
+\]
+The payoff is
+\[
+  H=(\bar S_T-K)_+.
+\]
+The state is two-dimensional before reduction: \(X_i=(S,A_i)\). The adjusted-strike algebra in Appendix C explains why the tested call can be fit on a one-dimensional adjusted-moneyness coordinate.
+
+\section{Basket Asian call}
+For \(d\) assets with basket weights \(w_j\),
+\[
+  B_{t_k}=\sum_{j=1}^d w_j S_{t_k}^{(j)},\qquad
+  \bar B_T=\frac{R_i+B_{t_i}+\sum_{k=i+1}^{N-1}B_{t_k}}{N},
+\]
+where \(R_i\) is the running sum of past basket fixings. The payoff is
+\[
+  H=(\bar B_T-K)_+.
+\]
+This is no longer reducible to one scalar in general because the future basket distribution depends on the full cross-section of spots and correlations. The code therefore uses moment baselines and PCA features.
+
+\section{Barrier call}
+For a knock-out call with lower barrier \(L\) and upper barrier \(U\), the alive indicator is
+\[
+  I_T=
+  \mathbf 1\{L<S_{t_k}<U \text{ for all monitored } t_k\}.
+\]
+The payoff is
+\[
+  H_{\rm out}=I_T(S_T-K)_+.
+\]
+For a knock-in, \(H_{\rm in}=(1-I_T)(S_T-K)_+\), so \(H_{\rm in}+H_{\rm out}=H_{\rm vanilla}\) path by path.
+
+\section{Cliquet payoff}
+For one underlying, the local return over period \(k\) is
+\[
+  R_k=\frac{S_{t_k}}{S_{t_{k-1}}}-1.
+\]
+The locally clipped coupon is
+\[
+  C_k=\clip(R_k,\ell,u).
+\]
+If \(a_i=\sum_{k=1}^{i}C_k\) is the accrued clipped return at reset \(i\), the final payoff is
+\[
+  H=N_0\,\clip\!\left(a_i+\sum_{k=i+1}^{M}C_k,\;G_L,\;G_U\right),
+\]
+where \(N_0\) is notional and \(G_L,G_U\) are global floor and cap.
+
+\section{Basket cliquet coupon variants}
+Let \(R_k^{(j)}\) be the \(j\)-th asset return in period \(k\). The repository tests several coupon maps. Representative examples are
+\[
+\begin{aligned}
+C_k^{\rm basket}
+  &= \clip\!\left(\sum_j w_j R_k^{(j)},\ell,u\right),\\
+C_k^{\rm worst}
+  &= \clip\!\left(\min_j R_k^{(j)},\ell,u\right),\\
+C_k^{\rm best}
+  &= \clip\!\left(\max_j R_k^{(j)},\ell,u\right),\\
+C_k^{\rm spread}
+  &= \clip\!\left(\sum_j w_jR_k^{(j)},\ell,u\right)
+     -\lambda_s\clip\!\left(\max_jR_k^{(j)}-\min_jR_k^{(j)},s_L,s_U\right)
+     +b\,\mathbf 1_{\{\sum_jw_jR_k^{(j)}\ge0\}}.
+\end{aligned}
+\]
+Order-statistic coupons are hard because small changes in cross-sectional dispersion can change which asset is best or worst.
+
+\section{Autocallable payoff recursion}
+At observation date \(k\), if the note has not called and \(S_{t_k}\ge B_{\rm call}K\), the contract redeems. A schematic recursion is
+\[
+  V_k(S)=
+  \begin{cases}
+  N_0(1+c_k), & S\ge B_{\rm call}K,\\
+  e^{-r\Delta t}\E[V_{k+1}(S_{k+1})\mid S_k=S], & S<B_{\rm call}K.
+  \end{cases}
+\]
+At maturity the redemption rule may include coupon, capital protection, or downside participation.
+
+\chapter{Implementation Algorithms}
+
+\section{Generic proxy construction algorithm}
+For every instrument, the implementation follows this structure.
+\begin{enumerate}
+  \item Define the contract payoff and observation schedule.
+  \item Prove or choose a Markov state \(X_t\).
+  \item Transform the state to dimensionless coordinates: moneyness, \(d_1\), normalized accrued return, normalized variance, PCA scores, or expected-total cushion.
+  \item Generate a training state grid. Include broad coverage and extra nodes near exercise, barrier, floor/cap, and low-value transition regions.
+  \item Generate Monte Carlo labels with Sobol, antithetics, control variates, and likelihood-ratio shifts where they lower variance.
+  \item Fit a proxy target such as \(\log(V+\varepsilon)\), a bounded logit, or a baseline residual.
+  \item Validate on independent states and independent random streams.
+  \item Report values, signed errors, absolute errors, relative errors with a floor, and benchmark standard errors when available.
+\end{enumerate}
+
+\section{European algorithm}
+\begin{enumerate}
+  \item Fix \(\tau=T-t\).
+  \item Choose training nodes \(S_i=S(d_{1,i})\) with \(d_{1,i}\) covering low and high deltas.
+  \item For each node, estimate \(V_i\) by shifted Sobol terminal paths:
+  \[
+    S_T^{(i,n)}
+    =
+    S_i\exp\!\left((r-q-\tfrac12\sigma^2)\tau+\sigma\sqrt\tau\,Z_{i,n}^{\rm shifted}\right).
+  \]
+  \item Fit \(y_i=\log(V_i+\varepsilon)\) with PCHIP in \(d_1\).
+  \item Predict by \(\widehat V(S)=\exp(\widehat y(d_1(S)))-\varepsilon\), clipped at zero.
+  \item Benchmark by Black-Scholes.
+\end{enumerate}
+
+\section{Asian algorithm}
+\begin{enumerate}
+  \item For each fixing date, build states \((S,A)\) in adjusted moneyness and running-average directions.
+  \item Compute \(K_{\rm adj}=(NK-A-S)/m\).
+  \item Use exact linear/zero regions when \(K_{\rm adj}\le0\) or the option is certainly out of the money.
+  \item For the active region, simulate future fixings by Sobol antithetic GBM paths.
+  \item Estimate the arithmetic payoff and geometric payoff on the same paths.
+  \item Use the exact geometric Asian value as a control variate.
+  \item Fit normalized value and time value with PCHIP.
+  \item Validate with an independent high-path benchmark.
+\end{enumerate}
+
+\section{Basket Asian algorithm}
+\begin{enumerate}
+  \item Build states \(X=(S^{(1)},\ldots,S^{(10)},R)\).
+  \item Compute the mean and variance of the final arithmetic basket average.
+  \item Price the moment-matched lognormal baseline \(B(X)\).
+  \item Compute PCA scores of centered log spots to summarize composition.
+  \item Fit a sparse Chebyshev correction to \(\log((V+\varepsilon)/(B+\varepsilon))\).
+  \item Bin residuals against expected-average moneyness and fit a PCHIP residual calibration.
+  \item Validate against Sobol/LR benchmarks on independent state grids.
+\end{enumerate}
+
+\section{American and Bermudan algorithm}
+\begin{enumerate}
+  \item Set terminal value equal to payoff.
+  \item Move backward through exercise dates.
+  \item At each date, simulate one-step transitions from training spots.
+  \item Evaluate the already-fitted next-date value on simulated next spots.
+  \item Average and discount to estimate continuation.
+  \item Fit continuation by PCHIP.
+  \item Define \(V_k(S)=\max(g_k(S),\widehat C_k(S))\).
+  \item Validate American values against finite differences and Bermudan values against a tree.
+\end{enumerate}
+
+\section{Barrier algorithm}
+\begin{enumerate}
+  \item Build an alive-state spot grid inside the barrier domain.
+  \item Simulate discrete monitoring paths with Sobol antithetics.
+  \item For continuous monitoring, multiply each path by Brownian-bridge survival probabilities on each segment.
+  \item Fit the alive knock-out value by the best validated one-dimensional interpolator.
+  \item Obtain knock-in values by in/out parity when needed.
+  \item Validate by independent high-path simulation.
+\end{enumerate}
+
+\section{Cliquet and basket cliquet algorithm}
+\begin{enumerate}
+  \item Represent the state by accrued return and any market variables needed for the next returns.
+  \item Use exact global floor/cap tails before simulation.
+  \item Simulate remaining local returns under GBM or SLV.
+  \item Reuse each simulated future coupon sum for several accrued values when possible.
+  \item Fit a bounded target in logit space.
+  \item For high-dimensional order-statistic basket coupons, fall back to cached Sobol/LR safety pricing when fitted surfaces fail max-error targets.
+\end{enumerate}
 
 \chapter{Validation and Timing}
 
@@ -333,6 +667,65 @@ The timing report separates:
 The reduced-budget smoke accuracy columns in the timing report are diagnostic only. The product-specific markdown summaries remain the full-budget accuracy source.
 
 \appendix
+
+\chapter{Line-by-Line Proofs: Conditional Pricing and State Choice}
+
+\section{Risk-neutral pricing formula}
+\begin{theorem}[Risk-neutral valuation, constant short rate]
+If the discounted asset gains are martingales under \(\Q\) and the payoff \(H\) is integrable, then the time-\(t\) model value is
+\[
+  V_t=e^{-r(T-t)}\E_\Q[H\mid\mathcal F_t].
+\]
+\end{theorem}
+\begin{proofsteps}
+\item The money-market account is \(B_t=e^{rt}\).
+\item Absence of arbitrage in the risk-neutral model says the discounted value process \(B_t^{-1}V_t\) is a \(\Q\)-martingale.
+\item Therefore
+\[
+  B_t^{-1}V_t
+  =
+  \E_\Q[B_T^{-1}H\mid\mathcal F_t].
+\]
+\item Since \(B_t=e^{rt}\) and \(B_T=e^{rT}\),
+\[
+  e^{-rt}V_t=e^{-rT}\E_\Q[H\mid\mathcal F_t].
+\]
+\item Multiply both sides by \(e^{rt}\) to obtain the formula.
+\end{proofsteps}
+
+\section{When a proxy state is sufficient}
+\begin{theorem}[State reduction by conditional distribution]
+Suppose \(X_t\) is \(\mathcal F_t\)-measurable and the conditional distribution of future cash flows \(H\) given \(\mathcal F_t\) depends on the past only through \(X_t\). Then there exists a function \(v\) such that
+\[
+  V_t=v(t,X_t).
+\]
+\end{theorem}
+\begin{proofsteps}
+\item Define the price by conditional expectation:
+\[
+  V_t=e^{-r(T-t)}\E[H\mid\mathcal F_t].
+\]
+\item By assumption, once \(X_t\) is known, earlier path details do not change the conditional law of \(H\).
+\item Therefore \(\E[H\mid\mathcal F_t]\) is a function of \(X_t\).
+\item Call this function \(g(t,X_t)\).
+\item Set \(v(t,X_t)=e^{-r(T-t)}g(t,X_t)\).
+\item Hence \(V_t=v(t,X_t)\).
+\end{proofsteps}
+
+\section{Tower property for backward induction}
+\begin{theorem}[Tower property]
+If \(\mathcal G\subseteq\mathcal F\), then
+\[
+  \E[\E[Y\mid\mathcal F]\mid\mathcal G]=\E[Y\mid\mathcal G].
+\]
+\end{theorem}
+\begin{proofsteps}
+\item The conditional expectation \(\E[Y\mid\mathcal F]\) is the best \(\mathcal F\)-measurable summary of \(Y\) in the sense of matching integrals over \(\mathcal F\)-events.
+\item Every \(\mathcal G\)-event is also an \(\mathcal F\)-event because \(\mathcal G\subseteq\mathcal F\).
+\item Therefore replacing \(Y\) by \(\E[Y\mid\mathcal F]\) preserves all integrals over \(\mathcal G\)-events.
+\item The conditional expectation with respect to \(\mathcal G\) is the unique \(\mathcal G\)-measurable variable with those integrals.
+\item Hence the identity follows.
+\end{proofsteps}
 
 \chapter{Line-by-Line Proofs: Monte Carlo}
 
@@ -378,6 +771,33 @@ L(z)
 L(z_1,\ldots,z_m)
 =\prod_{j=1}^m\exp\!\left(-\theta_j z_j+\frac{\theta_j^2}{2}\right).
 \]
+\end{proofsteps}
+
+\section{Mixture likelihood ratio}
+\begin{proofsteps}
+\item Let the original density be \(p(z)\).
+\item Choose shifted proposal densities \(q_m(z)\) and probabilities \(\pi_m\) with \(\sum_m\pi_m=1\).
+\item Define the mixture density
+\[
+  q(z)=\sum_{m=1}^M\pi_m q_m(z).
+\]
+\item Require \(q(z)>0\) wherever \(h(z)p(z)\neq0\).
+\item Multiply and divide by \(q\):
+\[
+  \int h(z)p(z)\dd z
+  =
+  \int h(z)\frac{p(z)}{q(z)}q(z)\dd z.
+\]
+\item Therefore, if \(Z\sim q\),
+\[
+  \E_p[h(Z)]
+  =
+  \E_q[h(Z)L(Z)],
+  \qquad
+  L(Z)=\frac{p(Z)}{q(Z)}.
+\]
+\item To simulate from \(q\), first draw a component \(M\) with probability \(\pi_m\), then draw \(Z\sim q_M\).
+\item The likelihood ratio must use the full mixture denominator \(q(z)\), not only the chosen component density \(q_M(z)\), because the sampled value \(z\) could also have been generated by other components.
 \end{proofsteps}
 
 \section{Antithetic estimator}
@@ -469,6 +889,39 @@ K_{\rm adj}=\frac{NK-A-S}{m}.
 \item Therefore \(V(S,A)=S F(K_{\rm adj}/S,t)\), which justifies a one-dimensional adjusted-moneyness proxy for the tested call setup.
 \end{proofsteps}
 
+\section{Geometric Asian control variate}
+For future fixing times \(t_1,\ldots,t_m\), define the geometric average
+\[
+  G=\left(\prod_{j=1}^m S_{t_j}\right)^{1/m}.
+\]
+\begin{proofsteps}
+\item Take logs:
+\[
+  \log G=\frac1m\sum_{j=1}^m \log S_{t_j}.
+\]
+\item Under GBM, each \(\log S_{t_j}\) is normal.
+\item A linear combination of jointly normal random variables is normal.
+\item Therefore \(\log G\sim N(\mu_G,\sigma_G^2)\).
+\item The mean is
+\[
+  \mu_G
+  =
+  \log S_0
+  +
+  \frac1m\sum_{j=1}^m(r-q-\tfrac12\sigma^2)t_j.
+\]
+\item The variance is
+\[
+  \sigma_G^2
+  =
+  \frac{\sigma^2}{m^2}
+  \sum_{i=1}^m\sum_{j=1}^m \min(t_i,t_j),
+\]
+because \(\Cov(W_{t_i},W_{t_j})=\min(t_i,t_j)\).
+\item Since \(G\) is lognormal, the call value \(\E[(G-K)_+]\) has the same algebraic form as Black-Scholes with log-mean \(\mu_G\) and log-variance \(\sigma_G^2\).
+\item This exact geometric Asian value can be used as the known mean \(m_C\) in the control-variate formula.
+\end{proofsteps}
+
 \chapter{Line-by-Line Proofs: Barriers}
 
 \section{In/out parity}
@@ -487,6 +940,14 @@ V_{\rm in}+V_{\rm out}=V_{\rm vanilla}.
 \end{proofsteps}
 
 \section{Brownian-bridge lower-barrier survival}
+\begin{theorem}[Brownian-bridge crossing probability]
+Let \(X_s\) be a Brownian bridge from \(x\) to \(y\) over length \(\Delta t\), with diffusion variance \(\sigma^2\). If \(x>b\) and \(y>b\), then
+\[
+  \Q\!\left(\min_{0\le s\le\Delta t}X_s\le b\,\middle|\,X_0=x,X_{\Delta t}=y\right)
+  =
+  \exp\!\left(-\frac{2(x-b)(y-b)}{\sigma^2\Delta t}\right).
+\]
+\end{theorem}
 \begin{proofsteps}
 \item Condition on log endpoints \(X_0=x\), \(X_{\Delta t}=y\), both above lower barrier \(b\).
 \item By the reflection principle, the conditional probability of crossing below \(b\) is
@@ -547,6 +1008,9 @@ H(t)=y_i h_{00}(t)+h_i d_i h_{10}(t)+y_{i+1}h_{01}(t)+h_i d_{i+1}h_{11}(t).
 \end{proofsteps}
 
 \section{Why PCHIP avoids artificial extrema}
+\begin{theorem}[Fritsch-Carlson monotonicity criterion]
+For a cubic Hermite interpolant on a monotone interval, if the normalized endpoint slopes satisfy the Fritsch-Carlson inequalities, then the derivative does not change sign inside the interval. Hence the cubic segment is monotone on that interval.
+\end{theorem}
 \begin{proofsteps}
 \item Let \(\delta_i=(y_{i+1}-y_i)/h_i\).
 \item If neighboring secants change sign, PCHIP sets the node slope to zero.
@@ -624,6 +1088,161 @@ e_{\rm rel}=\frac{|\widehat V-V|}{\eta}.
 \]
 \item Thus a nearly zero benchmark cannot create an infinite percentage error.
 \end{proofsteps}
+
+\chapter{Line-by-Line Proofs: Basket Moments and PCA}
+
+\section{Basket Asian first moment}
+Let the basket fixing at time \(t_k\) be
+\[
+  B_{t_k}=\sum_{j=1}^d w_j S_{t_k}^{(j)}.
+\]
+Under correlated risk-neutral GBM,
+\[
+  \E[S_{t_k}^{(j)}\mid S_0^{(j)}]
+  =
+  S_0^{(j)}e^{(r-q_j)t_k}.
+\]
+Therefore
+\[
+  \E[B_{t_k}]
+  =
+  \sum_{j=1}^d w_j S_0^{(j)}e^{(r-q_j)t_k}.
+\]
+For the final arithmetic basket average
+\[
+  \bar B=\frac{R_i+B_{t_i}+\sum_{k=i+1}^{N-1}B_{t_k}}{N},
+\]
+linearity gives
+\[
+  \E[\bar B]
+  =
+  \frac{R_i+B_{t_i}+\sum_{k=i+1}^{N-1}\E[B_{t_k}]}{N}.
+\]
+
+\section{Basket Asian second moment}
+For two assets \(j,\ell\) and times \(t_a,t_b\), correlated GBM gives
+\[
+\E[S_{t_a}^{(j)}S_{t_b}^{(\ell)}]
+=
+S_0^{(j)}S_0^{(\ell)}
+e^{(r-q_j)t_a+(r-q_\ell)t_b+\rho_{j\ell}\sigma_j\sigma_\ell\min(t_a,t_b)}.
+\]
+Then
+\[
+\E[B_{t_a}B_{t_b}]
+=
+\sum_{j=1}^d\sum_{\ell=1}^d
+w_jw_\ell
+\E[S_{t_a}^{(j)}S_{t_b}^{(\ell)}].
+\]
+Finally,
+\[
+\Var(\bar B)=\E[\bar B^2]-\E[\bar B]^2,
+\]
+where \(\E[\bar B^2]\) is obtained by summing \(\E[B_{t_a}B_{t_b}]\) over all future fixing pairs and adding deterministic running-sum terms.
+
+\section{Moment-matched lognormal baseline}
+\begin{proofsteps}
+\item Suppose a positive average has mean \(m\) and variance \(v\).
+\item Approximate it by \(L=e^Y\), \(Y\sim N(\mu_L,s_L^2)\).
+\item The lognormal mean and variance are
+\[
+\E[L]=e^{\mu_L+s_L^2/2},\qquad
+\Var(L)=e^{2\mu_L+s_L^2}(e^{s_L^2}-1).
+\]
+\item Set \(e^{\mu_L+s_L^2/2}=m\).
+\item Divide the variance equation by \(m^2\):
+\[
+\frac{v}{m^2}=e^{s_L^2}-1.
+\]
+\item Hence
+\[
+s_L^2=\log(1+v/m^2),\qquad
+\mu_L=\log m-\frac12s_L^2.
+\]
+\item Use the Black-Scholes-style truncated-lognormal formula to value \((L-K)_+\).
+\end{proofsteps}
+
+\section{PCA optimality}
+\begin{theorem}[Rayleigh-Ritz/PCA optimality]
+For a centered random vector with covariance matrix \(\Sigma\), the rank-\(k\) orthogonal projection minimizing mean-square reconstruction error projects onto the eigenvectors of \(\Sigma\) with the \(k\) largest eigenvalues.
+\end{theorem}
+\begin{proofsteps}
+\item Let \(R\) be a centered random vector with covariance \(\Sigma\).
+\item A rank-\(k\) orthogonal projection \(P\) has reconstruction error
+\[
+\E[\|R-PR\|^2]=\operatorname{tr}(\Sigma)-\operatorname{tr}(P\Sigma).
+\]
+\item Minimizing error is therefore equivalent to maximizing \(\operatorname{tr}(P\Sigma)\).
+\item The Rayleigh-Ritz theorem says this trace is maximized by projecting onto the eigenvectors with the \(k\) largest eigenvalues.
+\item Therefore PCA gives the best \(k\)-dimensional linear summary in mean-square reconstruction error.
+\end{proofsteps}
+
+\chapter{Line-by-Line Proofs: Sobol, Design, and Validation}
+
+\section{Why powers of two are used}
+Sobol sequences are digital nets in base two. The first \(2^m\) points have the balance property for elementary binary boxes. If we stop at an arbitrary \(N\), the last partial block may break this balance. The implementation therefore rounds a target path count to
+\[
+  N_{\rm Sobol}=2^{\lceil\log_2 N_{\rm target}\rceil}.
+\]
+This is not an unbiasedness theorem. It is a numerical integration design rule.
+
+\section{Common random numbers}
+\begin{proofsteps}
+\item At state \(x_i\), the label is \(V(x_i)=\E[h(x_i,Z)]\).
+\item Using the same \(Z_n\) for several states gives
+\[
+\widehat V(x_i)=\frac1N\sum_{n=1}^N h(x_i,Z_n).
+\]
+\item For each fixed \(i\), the marginal distribution of \(Z_n\) is unchanged.
+\item Therefore each \(\widehat V(x_i)\) remains unbiased.
+\item The errors across nearby states become correlated, which often makes label noise smoother and easier for interpolation to absorb.
+\end{proofsteps}
+
+\section{Benchmark independence}
+If the same paths are used for training labels and benchmark labels, the measured proxy error can be artificially small because both contain the same random noise. Independent benchmark streams estimate
+\[
+  \widehat V_{\rm proxy}(x)-V_{\rm model}(x)
+\]
+with less leakage. When a closed-form, finite-difference, or tree benchmark exists, it is preferred because it removes benchmark Monte Carlo noise.
+
+\chapter{Line-by-Line Proofs: SLV and Basket Cliquet}
+
+\section{Variance process discretization}
+The SLV cliquet code uses an Euler-type variance update with positivity protection. A schematic Heston-style variance step is
+\[
+  v_{t+\Delta t}
+  =
+  \max\!\left(
+  v_t+\kappa(\theta-v_t)\Delta t+\xi\sqrt{v_t^+}\sqrt{\Delta t}\,Z_v,\;0
+  \right).
+\]
+The max is not an exact theorem; it is a numerical safeguard. The consequence is that benchmark quality must be checked by increasing time steps or comparing against a stronger scheme when precision matters.
+
+\section{Local volatility multiplier}
+A local volatility multiplier \(L(S)\) changes the spot diffusion to
+\[
+  \frac{\dd S_t}{S_t}
+  =
+  (r-q)\dd t+L(S_t)\sqrt{v_t}\,\dd W_t.
+\]
+The pricing theorem still applies once the simulator defines the risk-neutral dynamics. The proxy must include enough state information, at least \(S_t\) and \(v_t\), because the future law depends on both.
+
+\section{Grouped accrued labels}
+For cliquets, suppose a simulated future path gives a remaining coupon sum \(C^{(n)}\). For accrued values \(a_1,\ldots,a_L\),
+\[
+  H_\ell^{(n)}
+  =
+  N_0\clip(a_\ell+C^{(n)},G_L,G_U).
+\]
+One simulation of \(C^{(n)}\) prices all \(L\) accrued layers. This is exact path reuse, not approximation, because the same future path sum is valid for every starting accrued value.
+
+\section{Why basket order statistics are hard}
+For a worst-of coupon,
+\[
+  C_k=\clip(\min_j R_k^{(j)},\ell,u).
+\]
+The identity of the minimum can change abruptly as the state changes. This creates nonsmooth interaction surfaces in spot and variance. A low-degree global polynomial can miss these switching surfaces. That is why the methodology allows a slower cached Sobol/LR safety proxy for strict max-error cases.
 
 \backmatter
 \chapter{References}
