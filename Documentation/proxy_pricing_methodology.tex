@@ -5,7 +5,14 @@
 \usepackage{booktabs,longtable,array}
 \usepackage{enumitem}
 \usepackage{xcolor}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{pgfplots}
 \usepackage{hyperref}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
 
 \hypersetup{
   colorlinks=true,
@@ -25,6 +32,7 @@
 \newtheorem{theorem}{Theorem}[chapter]
 \newtheorem{proposition}{Proposition}[chapter]
 \newtheorem{remark}{Remark}[chapter]
+\newtheorem{example}{Example}[chapter]
 
 \newenvironment{proofsteps}
 {\begin{enumerate}[label=\textbf{Line \arabic*.}, itemsep=0.35em]}
@@ -52,9 +60,16 @@
 \tableofcontents
 
 \chapter*{Reader's Guide}
-This document is written as a second-year undergraduate text. It assumes calculus, linear algebra, basic probability, and a willingness to read a few stochastic-process formulas. The goal is not to hide the implementation behind jargon. The goal is to show exactly how a Monte Carlo price label becomes a fast proxy.
+This document is written as a second-year undergraduate text. It assumes calculus, linear algebra, basic probability, and a willingness to read a few stochastic-process formulas. The goal is not to hide the implementation behind jargon. The goal is to explain the finance problem, motivate the proxy solution, show the diagnostic graphs, and then derive the mathematics carefully enough that another researcher can improve the method.
 
-The main chapters explain the workflow. The appendices give line-by-line proofs for the formulas used in the code. Every nontrivial implementation trick is classified as one of:
+The first three body chapters are intentionally practical:
+\begin{itemize}
+  \item Motivation: why repeated pricing creates a computational problem.
+  \item Solution: how the proxy workflow solves the problem.
+  \item Graphs: how to read the value and error diagnostics.
+\end{itemize}
+
+The later chapters explain the finance, the mathematics, and the implementation details. The appendices give line-by-line proofs for the formulas used in the code. Every nontrivial implementation trick is classified as one of:
 \begin{itemize}
   \item an exact pricing identity,
   \item an unbiased Monte Carlo variance-reduction identity,
@@ -86,6 +101,421 @@ Symbol & Meaning\\
 All prices in the experiments are model prices. If the simulator is GBM, SLV, or a tree, the proxy is judged against that model. A proxy can be accurate relative to the model and the model can still be a poor market model. The two questions are deliberately separated.
 
 \mainmatter
+
+\chapter{Motivation}
+
+\section{The practical problem}
+Modern risk systems often need many derivative prices, not one derivative price. A trader may ask for one price at one market state. A risk engine may need prices across thousands of simulated future states, stress scenarios, portfolio dates, and model configurations.
+
+If one Monte Carlo price costs seconds, then a large exposure run can become too slow. The direct approach is
+\[
+  \text{market state} \quad \longrightarrow \quad \text{full pricing model} \quad \longrightarrow \quad \text{price}.
+\]
+The proxy approach inserts an offline learning stage:
+\[
+  \text{market state} \quad \longrightarrow \quad \text{fast proxy} \quad \longrightarrow \quad \text{approximate model price}.
+\]
+The aim is not to replace financial modeling. The aim is to preserve the chosen model's price function while making repeated evaluation cheap.
+
+\section{Why this is not ordinary curve fitting}
+Derivative prices have financial structure. A good proxy should respect as much of that structure as possible.
+\begin{itemize}
+  \item A call price should not become negative.
+  \item A vanilla call is increasing in spot.
+  \item An American value is at least intrinsic value.
+  \item A barrier price can change rapidly near the barrier.
+  \item A cliquet value has exact floor and cap regions.
+  \item A basket product may depend on level, dispersion, correlation, and order statistics.
+\end{itemize}
+So the project does not ask, ``Which generic machine-learning method fits best?'' The better question is:
+\[
+  \text{Which financial state, target transform, variance reduction, and fitted proxy work together?}
+\]
+
+\section{Success criteria}
+The experiments judge a proxy by several criteria, because one number can hide too much.
+\begin{itemize}
+  \item \emph{Accuracy}: small signed, absolute, and relative errors against an independent benchmark.
+  \item \emph{Tail control}: acceptable error in deep in-the-money and out-of-the-money regions.
+  \item \emph{Stability}: no artificial oscillation near kinks, barriers, or exercise boundaries.
+  \item \emph{Speed}: fast evaluation after training.
+  \item \emph{Generality}: the method should extend from European options to path-dependent and higher-dimensional products.
+\end{itemize}
+The most important accuracy number in this project is often worst-case relative error with a denominator floor. The floor prevents a nearly zero benchmark from producing a meaningless huge percentage.
+
+\chapter{Solution Overview}
+
+\section{The core idea}
+For each product, write the expensive model price as a conditional expectation:
+\[
+  V(t,x)=\E_\Q[Y\mid X_t=x],
+\]
+where \(Y\) is the discounted future payoff and \(X_t\) is the state. Training means choosing states \(x_i\), estimating labels \(V(t,x_i)\), and fitting a fast approximation \(\widehat V(t,x)\).
+
+The current generic methodology is:
+\begin{enumerate}
+  \item Use finance to choose a pricing-sufficient state.
+  \item Transform the state into numerically stable coordinates.
+  \item Generate Monte Carlo labels with Sobol paths, antithetics, control variates, and likelihood-ratio importance sampling when useful.
+  \item Use exact regions whenever the payoff logic gives them.
+  \item Fit a shape-preserving one-dimensional proxy or a sparse higher-dimensional proxy.
+  \item Validate against an independent benchmark.
+\end{enumerate}
+
+\section{Workflow graph}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.9cm and 0.65cm,
+  box/.style={draw, rounded corners=2pt, align=center, minimum width=2.45cm, minimum height=0.78cm, font=\small},
+  wide/.style={draw, rounded corners=2pt, align=center, minimum width=3.1cm, minimum height=0.78cm, font=\small},
+  arr/.style={-{Latex[length=2mm]}, thick}
+]
+\node[box] (contract) {Contract\\payoff};
+\node[box, right=of contract] (state) {Pricing\\state};
+\node[box, right=of state] (labels) {MC labels\\with variance reduction};
+\node[box, right=of labels] (fit) {Fit proxy\\target};
+\node[box, right=of fit] (validate) {Independent\\benchmark};
+\node[wide, below=of labels] (exact) {Exact regions\\bounds and parity};
+\node[wide, below=of fit] (report) {Value, signed error,\\relative error, timing};
+\draw[arr] (contract) -- (state);
+\draw[arr] (state) -- (labels);
+\draw[arr] (labels) -- (fit);
+\draw[arr] (fit) -- (validate);
+\draw[arr] (exact) -- (labels);
+\draw[arr] (exact) -- (fit);
+\draw[arr] (validate) |- (report);
+\draw[arr] (fit) -- (report);
+\end{tikzpicture}
+\caption{Proxy construction workflow. The fitted method is only one part of the solution; state choice, variance reduction, exact payoff regions, and independent validation are equally important.}
+\end{figure}
+
+\section{Default method choices}
+For one-feature problems, the current default is SciPy PCHIP on a financially meaningful coordinate. This is used because it is local, shape-preserving, and stable near kinks. For higher-dimensional problems, the default moves toward sparse Chebyshev regression, PCA summaries, moment baselines, and residual calibration. For hard basket cliquet cases, a cached Sobol likelihood-ratio safety proxy is allowed when the fitted surface alone does not meet the error target.
+
+\chapter{Diagnostic Graphs}
+
+\section{Why graphs come before tables}
+Tables are useful for comparing many cases, but graphs reveal the failure mode. A method with a good average error can still fail in a wing, near a barrier, or at an exercise kink. For that reason the project uses a three-panel diagnostic:
+\begin{itemize}
+  \item benchmark value and proxy value;
+  \item signed price error, proxy minus benchmark;
+  \item signed relative error with a denominator floor.
+\end{itemize}
+The sign matters. A positive signed error means the proxy overprices relative to the benchmark. A negative signed error means it underprices.
+
+\section{Representative validation dashboard}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={group size=1 by 3, vertical sep=1.25cm},
+  width=0.88\linewidth,
+  height=0.20\textheight,
+  xmin=-3.0, xmax=3.0,
+  grid=both,
+  major grid style={gray!25},
+  minor grid style={gray!12},
+  tick label style={font=\small},
+  label style={font=\small},
+  legend style={font=\small, draw=none, at={(0.02,0.98)}, anchor=north west}
+]
+\nextgroupplot[
+  ylabel={value},
+  title={Benchmark value and proxy value}
+]
+\addplot[very thick, blue!65!black, mark=*] coordinates {
+  (-3.0,0.001) (-2.4,0.006) (-1.8,0.040) (-1.2,0.180) (-0.6,0.700) (0.0,1.800)
+  (0.6,4.000) (1.2,7.200) (1.8,11.300) (2.4,16.000) (3.0,21.500)
+};
+\addlegendentry{benchmark}
+\addplot[very thick, red!70!black, mark=square*] coordinates {
+  (-3.0,0.0012) (-2.4,0.0055) (-1.8,0.038) (-1.2,0.185) (-0.6,0.690) (0.0,1.820)
+  (0.6,3.960) (1.2,7.250) (1.8,11.280) (2.4,16.080) (3.0,21.450)
+};
+\addlegendentry{proxy}
+
+\nextgroupplot[
+  ylabel={signed price error},
+  title={Proxy minus benchmark},
+  scaled y ticks=false,
+  yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=2}
+]
+\addplot[very thick, black, mark=*] coordinates {
+  (-3.0,0.0002) (-2.4,-0.0005) (-1.8,-0.0020) (-1.2,0.0050) (-0.6,-0.0100) (0.0,0.0200)
+  (0.6,-0.0400) (1.2,0.0500) (1.8,-0.0200) (2.4,0.0800) (3.0,-0.0500)
+};
+\addplot[dashed, gray] coordinates {(-3,0) (3,0)};
+
+\nextgroupplot[
+  ylabel={signed relative error (\%)},
+  xlabel={state coordinate, for example \(d_1\) or adjusted moneyness},
+  title={Relative error with denominator floor}
+]
+\addplot[very thick, teal!65!black, mark=triangle*] coordinates {
+  (-3.0,0.08) (-2.4,-0.20) (-1.8,-0.80) (-1.2,2.00) (-0.6,-1.43) (0.0,1.11)
+  (0.6,-1.00) (1.2,0.69) (1.8,-0.18) (2.4,0.50) (3.0,-0.23)
+};
+\addplot[dashed, gray] coordinates {(-3,0) (3,0)};
+\addplot[dotted, red!60!black] coordinates {(-3,5) (3,5)};
+\addplot[dotted, red!60!black] coordinates {(-3,-5) (3,-5)};
+\end{groupplot}
+\end{tikzpicture}
+\caption{Representative diagnostic shape. The coordinates are illustrative, not a fresh benchmark run. The purpose is to show the graph format used throughout the project: values on top, signed price error in the middle, and signed relative error with a practical floor at the bottom.}
+\end{figure}
+
+\section{How to interpret the panels}
+The top panel answers the first financial question: does the proxy have the same shape as the model value? The middle panel answers the pricing question: where does the proxy overprice or underprice in currency units? The bottom panel answers the risk-control question: is the percentage error acceptable after avoiding meaningless division by tiny values?
+
+For a one-dimensional product, a good proxy usually has a smooth signed-error curve around zero. A sudden spike suggests a missing knot, a bad training label, a barrier/exercise transition, or an extrapolation problem. For a higher-dimensional product, the same idea is applied to slices, stress paths, and validation grids.
+
+\chapter{Guided Examples}
+
+\section{A European call proxy}
+\begin{example}[One state variable is enough]
+Consider a one-year European call with \(S=100\), \(K=100\), \(r=5\%\), \(q=2\%\), and \(\sigma=20\%\). Under GBM, once today's spot is known, the future distribution of \(S_T\) does not depend on the earlier path. Thus the pricing state is just \(X_t=S_t\).
+\end{example}
+
+The proxy should not fit raw spot blindly. A better coordinate is
+\[
+  d_1
+  =
+  \frac{\log(S/K)+(r-q+\tfrac12\sigma^2)\tau}{\sigma\sqrt{\tau}}.
+\]
+This coordinate is financially meaningful because Black-Scholes delta is \(\Phi(d_1)\) for a non-dividend-adjusted call. Spacing points in \(d_1\) gives more balanced coverage of option-delta regions than spacing points uniformly in spot.
+
+\section{An Asian option running-sum example}
+\begin{example}[Why the running sum matters]
+Suppose an arithmetic Asian call has 12 monthly fixings and strike \(K=100\). Four fixings have already occurred, with running sum
+\[
+  A=98+101+103+99=401.
+\]
+Today is a fixing date and today's spot is \(S=105\). There are \(m=7\) future fixings after today. The final average is
+\[
+  \bar S_T
+  =
+  \frac{401+105+\sum_{j=1}^{7}S_{t_j}}{12}.
+\]
+\end{example}
+
+The payoff \((\bar S_T-100)_+\) is equivalent to a scaled option on the future average growth factors. The adjusted strike is
+\[
+  K_{\rm adj}
+  =
+  \frac{12\cdot100-401-105}{7}
+  =
+  99.1429.
+\]
+The relevant moneyness is therefore \(K_{\rm adj}/S=99.1429/105=0.9442\). This example explains why the proxy uses a coordinate involving both \(S\) and \(A\), not spot alone.
+
+\section{A barrier example}
+\begin{example}[Same spot, different barrier state]
+Consider a down-and-out call with lower barrier \(L=80\). Two paths can both have today's spot \(S_t=100\). If the first path never touched 80, the option is alive. If the second path touched 80 earlier, the option has already knocked out and is worth zero. The same spot therefore has two different values.
+\end{example}
+
+The state must include an alive indicator \(I_t\). A spot-only proxy would average alive and dead cases together, which is financially wrong. This is an example where adding one discrete state variable fixes a serious missing-information problem.
+
+\section{An American put example}
+\begin{example}[Exercise versus continuation]
+Suppose an American put has strike \(K=100\) and today's spot is \(S=70\). Immediate exercise pays \(K-S=30\). If the discounted expected continuation value is only 28, the value is 30. If the continuation value is 33, the value is 33.
+\end{example}
+
+The recursion is
+\[
+  V(t,S)=\max\{K-S,\;C(t,S)\},
+\]
+where \(C(t,S)\) is continuation value. A proxy should fit continuation smoothly but impose the max exactly. If it does not impose the max, it can produce values below intrinsic value, which is an arbitrage-style numerical error.
+
+\section{A cliquet exact-tail example}
+\begin{example}[No regression needed in a global cap tail]
+Suppose a cliquet has global cap \(G_U=20\%\), local floor \(\ell=-2\%\), local cap \(u=4\%\), current accrued return \(a=18\%\), and five coupons remaining. Even if every future coupon is as low as possible, the final accumulated return is at least
+\[
+  18\%+5(-2\%)=8\%.
+\]
+So the global cap is not guaranteed. But if \(a=24\%\), then even before future coupons the final clipped payoff is already capped at \(20\%\), so the value is exactly the discounted capped payoff.
+\end{example}
+
+Exact regions like this are important. They reduce MC noise and stop the fitted proxy from learning a flat floor or cap region from noisy labels.
+
+\section{A basket Asian example}
+\begin{example}[Same basket level, different composition]
+Consider a two-asset equal-weight basket. State A has spots \((100,100)\). State B has spots \((130,70)\). Both have basket level 100. If the assets have different volatilities or dividends, or if the payoff depends on nonlinear future averages, the two states need not have the same value.
+\end{example}
+
+This explains why a basket proxy often needs composition features, not only basket level. PCA features are a compact way to describe composition and dispersion when the number of underlyings is large.
+
+\section{A basket cliquet order-statistic example}
+\begin{example}[Worst-of identity can switch]
+Suppose a three-asset worst-of cliquet coupon uses
+\[
+  \min(R^{(1)},R^{(2)},R^{(3)}).
+\]
+At one state, asset 1 may be most likely to be worst. At a nearby state, asset 2 may become the likely worst asset. The coupon surface can bend sharply near the switching region.
+\end{example}
+
+This is why basket cliquet was harder than European or Asian options. The proxy must handle not only level and volatility but also cross-sectional ranking behavior.
+
+\chapter{Financial Background}
+
+\section{What a derivative price means}
+A derivative is a contract whose cash flows are determined by market variables such as spot prices, interest rates, volatilities, realized averages, barrier events, or coupon-reset rules. A European call, for example, pays \((S_T-K)_+\) at maturity. An Asian option pays a function of an average. A cliquet pays a function of capped and floored period returns.
+
+The mathematical payoff is not yet the price. A price is the amount of money at the valuation date that is economically equivalent to the future cash flows under the chosen pricing model. In a complete frictionless model, this equivalence is understood through replication: if a self-financing trading strategy produces the same future cash flow as the derivative, then the derivative must have the same initial cost as that strategy. Otherwise an arbitrage would exist.
+
+For this project, the word \emph{price} always means \emph{model price}. The model may be GBM, SLV, a tree, a finite-difference method, or a Monte Carlo simulator. The proxy is judged by how well it approximates the model price. It does not by itself prove that the model is a good description of the market.
+
+\section{Why risk-neutral pricing appears}
+It is tempting to think that a derivative price is the discounted real-world expected payoff,
+\[
+  e^{-r(T-t)}\E_{\mathbb P}[H\mid\mathcal F_t],
+\]
+where \(\mathbb P\) is the real-world probability measure. That is usually wrong. Risky cash flows earn risk premia, and the physical drift of the underlying asset is not the right drift for no-arbitrage valuation.
+
+Risk-neutral pricing changes the probability measure from \(\mathbb P\) to \(\Q\) so that discounted tradable asset prices are martingales. In the Black-Scholes model, this means the stock drift becomes \(r-q\), not the investor's expected return \(\mu\). The pricing formula then becomes
+\[
+  V_t
+  =
+  B_t\,\E_\Q\!\left[\frac{H}{B_T}\,\middle|\,\mathcal F_t\right].
+\]
+This is not saying investors are risk-neutral. It is saying that, after risk has been priced through the change of measure, the derivative can be valued as a discounted expectation under \(\Q\).
+
+\begin{remark}[Model choice and market calibration]
+In practice, desks calibrate models to liquid market instruments before using them for less liquid instruments. The proxy work in this repository starts after that modeling choice has been made. The central question is: given a pricing model, can we replace repeated expensive valuation with a fast and accurate approximation?
+\end{remark}
+
+\section{Why proxies are useful}
+Monte Carlo pricing can be expensive because one price may require many simulated paths. A risk report, PFE calculation, XVA run, stress test, or calibration loop may need thousands or millions of prices. A proxy replaces the expensive pricing function
+\[
+  x \longmapsto V(t,x)
+\]
+with a cheaper function
+\[
+  x \longmapsto \widehat V(t,x).
+\]
+The proxy is trained offline using expensive labels and then used online for fast repeated evaluation.
+
+This separation is the main engineering tradeoff:
+\[
+  \text{spend time once to train} \quad \Longrightarrow \quad \text{save time many times later}.
+\]
+The proxy is valuable only if it preserves the financial shape of the price: monotonicity, convexity when relevant, exercise kinks, barrier transitions, floor/cap regions, and tail behavior.
+
+\section{Product families and path dependence}
+The products in this project differ mainly in what information from the past is needed to value the future.
+
+\begin{longtable}{@{}p{0.22\linewidth}p{0.34\linewidth}p{0.34\linewidth}@{}}
+\toprule
+Product & Financial feature & State idea\\
+\midrule
+European & payoff depends only on terminal spot & current spot is enough under GBM\\
+Asian & payoff depends on an average & current spot plus running sum\\
+Basket Asian & payoff depends on an average basket & all current spots plus running basket sum\\
+American/Bermudan & holder may exercise early & current spot and exercise date\\
+Barrier & payoff depends on whether a level was hit & current spot plus alive/hit status\\
+Cliquet & payoff depends on capped/floored reset returns & accrued coupon plus market state\\
+Autocallable & early redemption at observation dates & spot, date, and alive status\\
+\bottomrule
+\end{longtable}
+
+This is why proxy design is not only a regression problem. It is first a financial-state problem. If the state omits information that affects future cash flows, then no interpolation method can fully repair the error.
+
+\section{Model risk, numerical risk, and proxy risk}
+There are three different errors that should not be confused.
+\begin{itemize}
+  \item \emph{Model risk}: the chosen dynamics may not match the market.
+  \item \emph{Numerical risk}: the benchmark simulator may have time-step, path-count, or discretization error.
+  \item \emph{Proxy risk}: the fitted approximation may differ from the benchmark model value.
+\end{itemize}
+This repository mainly studies proxy risk and numerical risk under specified models. When closed-form benchmarks exist, as for European Black-Scholes options, they are used. When they do not exist, the benchmark is a stronger numerical calculation, usually with more paths, independent randomization, and variance reduction.
+
+\chapter{Mathematical Background}
+
+\section{Conditional expectation as the pricing target}
+The central mathematical object is a conditional expectation:
+\[
+  V(t,x)=\E_\Q[Y\mid X_t=x],
+\]
+where \(Y\) is the discounted future payoff and \(X_t\) is the state. This formula says: among all scenarios that share the same current state \(x\), average the discounted future payoff under the pricing measure.
+
+For a second-year undergraduate, the useful intuition is that conditional expectation is the best mean-square prediction using the information currently available. If \(g(X_t)\) is any function of the state, then
+\[
+  \E\!\left[(Y-\E[Y\mid X_t])^2\right]
+  \le
+  \E\!\left[(Y-g(X_t))^2\right].
+\]
+So proxy pricing can be viewed as approximating the best possible state-based prediction of the discounted payoff.
+
+\section{Pricing-sufficient states}
+\begin{definition}[Pricing-sufficient state]
+Let \((\Omega,\mathcal F,(\mathcal F_t)_{t\ge0},\Q)\) be a filtered risk-neutral probability space, and let \(H\) be an integrable payoff. An adapted process \(X_t\in\R^d\) is called pricing-sufficient for \(H\) at time \(t\) if there exists a measurable function \(v\) such that
+\[
+  B_t\,\E_\Q\!\left[\frac{H}{B_T}\,\middle|\,\mathcal F_t\right]
+  =
+  v(t,X_t).
+\]
+\end{definition}
+
+This definition is the professional version of the earlier informal phrase ``a good state is sufficient.'' It says exactly what must be true: after conditioning on \(X_t\), no missing history can change the price. The state may still be too high-dimensional for convenient fitting, but it is at least financially correct.
+
+\begin{remark}[Sufficient does not mean minimal]
+A sufficient state may contain redundant variables. For example, including both spot and log spot is unnecessary but still sufficient. A minimal state removes redundancy, but finding the truly minimal state is often less important than finding a stable low-dimensional state that prices accurately.
+\end{remark}
+
+\section{Markov models and state evolution}
+A process is Markov if the conditional law of the future depends on the past only through the current state. In a one-asset GBM model,
+\[
+  \frac{\dd S_t}{S_t}=(r-q)\dd t+\sigma\dd W_t,
+\]
+the future distribution of \(S_T\) depends on the current history only through \(S_t\). Thus \(S_t\) is a pricing-sufficient state for European options.
+
+For path-dependent products, the spot alone is usually not Markov for the payoff. An Asian option also needs the running sum. A barrier option needs to know whether the barrier has already been hit. A cliquet needs the accrued coupon. The mathematical task is to enlarge the state just enough to restore the Markov property for the future cash flows.
+
+\section{Brownian motion, GBM, and lognormality}
+GBM is used throughout the simpler examples because it has a closed-form transition:
+\[
+  S_{t+\Delta t}
+  =
+  S_t
+  \exp\!\left((r-q-\tfrac12\sigma^2)\Delta t+\sigma\sqrt{\Delta t}\,Z\right),
+  \qquad Z\sim N(0,1).
+\]
+This formula explains why log-moneyness and \(d_1\)-type variables are natural coordinates. The randomness enters the log price additively, so a coordinate based on \(\log(S/K)\) is better scaled than raw spot.
+
+For multiple assets, the normal shocks are correlated. If \(\rho\) is the correlation matrix and \(L L^\top=\rho\), then \(LZ\) has correlation \(\rho\) when \(Z\) has independent standard-normal components. This is the linear algebra behind basket simulations.
+
+\section{Dynamic programming for exercise and callable products}
+Early-exercise and callable products are valued backward in time. At a decision date, the value is the better of stopping and continuing. For an American-style product,
+\[
+  V_k(x)=\max\{g_k(x), C_k(x)\},
+\]
+where \(g_k(x)\) is immediate exercise value and
+\[
+  C_k(x)=e^{-r\Delta t}\E_\Q[V_{k+1}(X_{k+1})\mid X_k=x]
+\]
+is continuation value.
+
+The proxy problem is therefore not only terminal payoff fitting. It can also be continuation-value fitting. This is why monotone and shape-preserving one-dimensional methods are useful: exercise boundaries create kinks, and a global polynomial can oscillate near those kinks.
+
+\section{Approximation viewpoint}
+After MC labels are generated, fitting is an approximation problem. There are three common viewpoints.
+\begin{itemize}
+  \item \emph{Interpolation}: pass exactly through relatively clean labels. PCHIP is in this category.
+  \item \emph{Regression}: fit noisy labels with a lower-dimensional function class. Ridge Chebyshev regression is in this category.
+  \item \emph{Baseline plus correction}: use finance to explain most of the price, then fit the smaller residual.
+\end{itemize}
+The best method depends on dimension and noise. In one feature, shape-preserving interpolation is hard to beat when labels are accurate. In many features, sparse regression, PCA summaries, and baseline corrections become more important because grids become too large.
+
+\section{Curse of dimensionality}
+If one dimension uses \(m\) grid points, a full tensor grid in \(d\) dimensions uses \(m^d\) points. With \(m=20\) and \(d=10\), this is \(20^{10}\), which is impossible for routine training. This is the curse of dimensionality.
+
+The project responds to this in several ways:
+\begin{itemize}
+  \item reduce the state using finance, such as adjusted moneyness for Asian options;
+  \item use PCA to summarize correlated cross-sectional variation;
+  \item use sparse Chebyshev bases rather than full tensor bases;
+  \item use baselines so that the fitted residual is simpler than the original price;
+  \item use cached MC safety pricing for hard basket cliquet cases where a fitted proxy alone is not reliable enough.
+\end{itemize}
 
 \chapter{The Pricing Problem}
 

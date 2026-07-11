@@ -254,12 +254,15 @@ output/pdf/proxy_pricing_methodology.pdf
 ```
 
 The guide is written as a LaTeX textbook for a second-year undergraduate with
-calculus, probability, and linear algebra. Its 47 physical pages include
-40 numbered body pages plus front matter, with:
+calculus, probability, and linear algebra. Its 63 physical pages start with
+motivation, solution overview, diagnostic graphs, and guided examples before
+moving into the technical chapters. It includes:
 
 ```text
+risk-system motivation and the repeated-pricing problem
+solution workflow graph and representative value/error diagnostic plots
+guided examples for European, Asian, barrier, American, cliquet, and basket products
 risk-neutral valuation, state sufficiency, and error decomposition
-risk-neutral pricing and Monte Carlo label construction
 Sobol path generation, antithetics, control variates, and LR mixture IS
 step-by-step proxy recipes and implementation algorithms for every instrument
 complete PCHIP and sparse Chebyshev construction details
