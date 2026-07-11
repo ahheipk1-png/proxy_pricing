@@ -18,21 +18,21 @@ it with `(timing rerun)`.
 
 HTML dashboard: `timing_performance_summary.html`.
 
-Total benchmark wall time: `16.96` seconds.
-Worker processes: `4`.
+Total benchmark wall time: `43.60` seconds.
+Worker processes: `1`.
 Minimum timed scenario combinations per option family: `100`.
 
 | Option type | Timed scenario combinations | Executed valuation states | Test-case details | Documented default/best method | Documented worst max | Documented avg p99 | Smoke avg max | Smoke worst max | Smoke avg p99 | Avg sample gen / fit | Avg proxy train / fit |
 |---|---:|---:|---|---|---:|---:|---:|---:|---:|---:|---:|
-| European | 200 | 6200 | [view cases](timing_performance_summary.html#european-cases) | [log Chebyshev in d1, degree 7](../../European/findings/european_option_grid/summary.md) | 1.029% | 0.256% | 0.024% | 0.265% | 0.023% | 0.0019s | 0.0003s |
-| Asian | 100 | 1300 | [view cases](timing_performance_summary.html#asian-cases) | [adjusted-moneyness PCHIP hybrid](../../Asian/results/summary.md) | 2.454% | 1.141% | 0.788% | 7.794% | 0.720% | 0.0331s | 0.0005s |
-| American | 100 | 2100 | [view cases](timing_performance_summary.html#american-cases) | [PCHIP continuation spline](../../American/results/summary.md) | 2.249% | 0.947% | 16.958% | 65.444% | 15.799% | 0.0081s | 0.0025s |
-| Bermudan | 100 | 2100 | [view cases](timing_performance_summary.html#bermudan-cases) | [log-continuation PCHIP dynamic programming](../../Bermudan/results/summary.md) | 8.300% | 1.924% | 2.618% | 7.219% | 2.394% | 0.0110s | 0.0022s |
-| Barrier | 120 | 1800 | [view cases](timing_performance_summary.html#barrier-cases) | [best of PCHIP/Akima/Bernstein by variant](../../Barrier/results/summary.md) | 8.133%-9.096% | 44.029% (timing rerun) | 47.888% | 493.655% | 44.029% | 0.0249s | 0.0002s |
-| Cliquet | 100 | 1220 | [view cases](timing_performance_summary.html#cliquet-cases) | [bounded-logit Chebyshev on expected-total z](../../Cliquet/results/summary.md) | 3.593% | 0.928% | 1.468% | 8.917% | 1.355% | 0.0145s | 0.0002s |
-| SLV cliquet | 100 | 1500 | [view cases](timing_performance_summary.html#slv-cliquet-cases) | [adaptive hybrid](../../SLVCliquet/results/summary.md) | 5.067% | 2.760% | 949.719% | 7705.511% | 860.723% | 0.0532s | 0.0005s |
-| Basket Asian | 100 | 900 | [view cases](timing_performance_summary.html#basket-asian-cases) | [PCHIP-calibrated PCA log-factor correction](../../BasketAsian/results/summary.md) | 5.873% | 1.820% | 3.352% | 24.253% | 3.124% | 0.0088s | 0.0588s |
-| Basket cliquet | 100 | 1100 | [view cases](timing_performance_summary.html#basket-cliquet-cases) | [cached Sobol/LR safety proxy for hard cases](../../BasketCliquet/results/summary.md) | 11.2% | 4443.449% (timing rerun) | 4791.341% | 140444.643% | 4443.449% | 0.0024s | 0.0005s |
+| European | 200 | 6200 | [view cases](timing_performance_summary.html#european-cases) | [log Chebyshev in d1, degree 7](../../European/findings/european_option_grid/summary.md) | 1.029% | 0.256% | 0.024% | 0.265% | 0.023% | 0.0019s | 0.0002s |
+| Asian | 100 | 1300 | [view cases](timing_performance_summary.html#asian-cases) | [adjusted-moneyness PCHIP hybrid](../../Asian/results/summary.md) | 2.454% | 1.141% | 0.788% | 7.794% | 0.720% | 0.0314s | 0.0005s |
+| American | 100 | 2100 | [view cases](timing_performance_summary.html#american-cases) | [PCHIP continuation spline](../../American/results/summary.md) | 2.249% | 0.947% | 16.958% | 65.444% | 15.799% | 0.0078s | 0.0025s |
+| Bermudan | 100 | 2100 | [view cases](timing_performance_summary.html#bermudan-cases) | [log-continuation PCHIP dynamic programming](../../Bermudan/results/summary.md) | 8.300% | 1.924% | 2.618% | 7.219% | 2.394% | 0.0102s | 0.0021s |
+| Barrier | 120 | 1800 | [view cases](timing_performance_summary.html#barrier-cases) | [best of PCHIP/Akima/Bernstein by variant](../../Barrier/results/summary.md) | 8.133%-9.096% | 44.029% (timing rerun) | 47.888% | 493.655% | 44.029% | 0.0247s | 0.0002s |
+| Cliquet | 100 | 1220 | [view cases](timing_performance_summary.html#cliquet-cases) | [bounded-logit Chebyshev on expected-total z](../../Cliquet/results/summary.md) | 3.593% | 0.928% | 1.468% | 8.917% | 1.355% | 0.0146s | 0.0002s |
+| SLV cliquet | 100 | 1500 | [view cases](timing_performance_summary.html#slv-cliquet-cases) | [adaptive hybrid](../../SLVCliquet/results/summary.md) | 5.067% | 2.760% | 949.719% | 7705.511% | 860.723% | 0.0542s | 0.0005s |
+| Basket Asian | 100 | 900 | [view cases](timing_performance_summary.html#basket-asian-cases) | [PCHIP-calibrated PCA log-factor correction](../../BasketAsian/results/summary.md) | 5.873% | 1.820% | 3.352% | 24.253% | 3.124% | 0.0088s | 0.0592s |
+| Basket cliquet | 100 | 1100 | [view cases](timing_performance_summary.html#basket-cliquet-cases) | [cached Sobol/LR safety proxy for hard cases](../../BasketCliquet/results/summary.md) | 11.2% | 4443.449% (timing rerun) | 4791.341% | 140444.643% | 4443.449% | 0.0025s | 0.0005s |
 | Autocallable | 100 | 18100 | [view cases](timing_performance_summary.html#autocallable-cases) | [Akima/PCHIP log-value interpolation](../../Autocallable/results/summary.md) | 0.123% | 0.051% | 0.445% | 1.298% | 0.381% | 0.0018s | 0.0002s |
 | Random payoff | 128 | 32128 | [view cases](timing_performance_summary.html#random-payoff-cases) | [Akima log-value interpolation](../../RandomOption/results/summary.md) | 0.658% | 0.037% | 0.198% | 2.839% | 0.186% | 0.0020s | 0.0002s |
 
@@ -68,21 +68,21 @@ Minimum timed scenario combinations per option family: `100`.
 | Autocallable | 100 | 18100 | 181.0 |
 | Random payoff | 128 | 32128 | 251.0 |
 
-## Worker Timing Breakdown
+## Option-Family Timing Breakdown
 
-| Option type | Worker wall time |
-|---|---:|
-| European | 0.53s |
-| Asian | 4.47s |
-| American | 3.55s |
-| Bermudan | 2.14s |
-| Barrier | 5.13s |
-| Cliquet | 2.36s |
-| SLV cliquet | 8.26s |
-| Basket Asian | 11.27s |
-| Basket cliquet | 1.98s |
-| Autocallable | 1.73s |
-| Random payoff | 2.34s |
+| Option type | Total wall time | Timed scenario combinations | Avg wall time / scenario | Executed valuation states | Avg wall time / valuation state |
+|---|---:|---:|---:|---:|---:|
+| European | 0.52s | 200 | 0.0026s | 6200 | 0.000084s |
+| Asian | 4.24s | 100 | 0.0424s | 1300 | 0.003259s |
+| American | 3.57s | 100 | 0.0357s | 2100 | 0.001699s |
+| Bermudan | 2.03s | 100 | 0.0203s | 2100 | 0.000968s |
+| Barrier | 5.04s | 120 | 0.0420s | 1800 | 0.002801s |
+| Cliquet | 2.36s | 100 | 0.0236s | 1220 | 0.001938s |
+| SLV cliquet | 8.42s | 100 | 0.0842s | 1500 | 0.005615s |
+| Basket Asian | 11.41s | 100 | 0.1141s | 900 | 0.012681s |
+| Basket cliquet | 1.98s | 100 | 0.0198s | 1100 | 0.001800s |
+| Autocallable | 1.68s | 100 | 0.0168s | 18100 | 0.000093s |
+| Random payoff | 2.34s | 128 | 0.0183s | 32128 | 0.000073s |
 
 ## Notes
 

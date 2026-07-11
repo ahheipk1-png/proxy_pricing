@@ -231,6 +231,13 @@ $env:PROXY_BENCHMARK_WORKERS = "8"
 python ProxyTimingBenchmark.py
 ```
 
+For clean sequential option-family timing, set the worker count to one:
+
+```powershell
+$env:PROXY_BENCHMARK_WORKERS = "1"
+python ProxyTimingBenchmark.py
+```
+
 Generate the expanded coverage report, which asserts at least 100 cases per
 option type, with:
 

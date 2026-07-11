@@ -1068,15 +1068,19 @@ def markdown_table(summary, total_seconds, worker_count, worker_timings):
     lines.extend(
         [
             "",
-            "## Worker Timing Breakdown",
+            "## Option-Family Timing Breakdown",
             "",
-            "| Option type | Worker wall time |",
-            "|---|---:|",
+            "| Option type | Total wall time | Timed scenario combinations | Avg wall time / scenario | Executed valuation states | Avg wall time / valuation state |",
+            "|---|---:|---:|---:|---:|---:|",
         ]
     )
     for row in summary:
+        total_time = worker_timings.get(row["option"], 0.0)
+        per_scenario = total_time / max(row["fits"], 1)
+        per_state = total_time / max(row["valuation_cases"], 1)
         lines.append(
-            f"| {row['option']} | {worker_timings.get(row['option'], 0.0):.2f}s |"
+            f"| {row['option']} | {total_time:.2f}s | {row['fits']} | "
+            f"{per_scenario:.4f}s | {row['valuation_cases']} | {per_state:.6f}s |"
         )
     lines.extend(
         [
@@ -1118,6 +1122,7 @@ def anchor_id(option):
 
 def html_table(summary, total_seconds, worker_count, worker_timings):
     rows_html = []
+    timing_rows_html = []
     for row in summary:
         reference = REFERENCE[row["option"]]
         reference_p99 = reference_p99_display(reference, row)
@@ -1135,6 +1140,19 @@ def html_table(summary, total_seconds, worker_count, worker_timings):
             f"<td class='num'>{100.0 * row['avg_p99_rel']:.3f}%</td>"
             f"<td class='num'>{row['avg_sample_sec']:.4f}s</td>"
             f"<td class='num'>{row['avg_train_sec']:.4f}s</td>"
+            "</tr>"
+        )
+        total_time = worker_timings.get(row["option"], 0.0)
+        per_scenario = total_time / max(row["fits"], 1)
+        per_state = total_time / max(row["valuation_cases"], 1)
+        timing_rows_html.append(
+            "<tr>"
+            f"<td>{escape(row['option'])}</td>"
+            f"<td class='num'>{total_time:.2f}s</td>"
+            f"<td class='num'>{row['fits']}</td>"
+            f"<td class='num'>{per_scenario:.4f}s</td>"
+            f"<td class='num'>{row['valuation_cases']}</td>"
+            f"<td class='num'>{per_state:.6f}s</td>"
             "</tr>"
         )
 
@@ -1158,6 +1176,9 @@ def html_table(summary, total_seconds, worker_count, worker_timings):
             f"sample {timed['sample_sec']:.4f}s, train {timed['train_sec']:.4f}s</li>"
             for timed in matching_rows
         )
+        total_time = worker_timings.get(row["option"], 0.0)
+        per_scenario = total_time / max(row["fits"], 1)
+        per_state = total_time / max(row["valuation_cases"], 1)
         detail_sections.append(
             f"<section id='{anchor_id(row['option'])}'>"
             f"<h2>{escape(row['option'])}</h2>"
@@ -1168,7 +1189,9 @@ def html_table(summary, total_seconds, worker_count, worker_timings):
             f"<ul>{case_items}</ul>"
             "<h3>Timed-run cases</h3>"
             f"<ul>{timed_items}</ul>"
-            f"<p>Worker wall time: <strong>{worker_timings.get(row['option'], 0.0):.2f}s</strong>.</p>"
+            f"<p>Option-family wall time: <strong>{total_time:.2f}s</strong>; "
+            f"average per scenario: <strong>{per_scenario:.4f}s</strong>; "
+            f"average per valuation state: <strong>{per_state:.6f}s</strong>.</p>"
             "<p><a href='#top'>Back to table</a></p>"
             "</section>"
         )
@@ -1232,6 +1255,22 @@ def html_table(summary, total_seconds, worker_count, worker_timings):
     not store an aggregate p99 statistic, so this dashboard fills the value
     from the current representative timing pass.
   </p>
+  <h2>Option-Family Timing Breakdown</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Option type</th>
+        <th>Total wall time</th>
+        <th>Timed scenario combinations</th>
+        <th>Avg wall time / scenario</th>
+        <th>Executed valuation states</th>
+        <th>Avg wall time / valuation state</th>
+      </tr>
+    </thead>
+    <tbody>
+      {''.join(timing_rows_html)}
+    </tbody>
+  </table>
   {''.join(detail_sections)}
 </body>
 </html>
