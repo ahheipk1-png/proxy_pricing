@@ -50,7 +50,13 @@ OUTPUT_DIR = Path(__file__).resolve().parent / "BarrierOptExperiment" / "results
 PLOT_DIR = OUTPUT_DIR / "plots"
 METHOD_CSV = OUTPUT_DIR / "barrier_proxy_method_results.csv"
 DETAIL_CSV = OUTPUT_DIR / "barrier_proxy_validation_details.csv"
-SUMMARY_PATH = OUTPUT_DIR / "summary.md"
+SUMMARY_PATH = (
+    Path(__file__).resolve().parent
+    / "Markdown"
+    / "Barrier"
+    / "results"
+    / "summary.md"
+)
 
 
 def dt(params):
@@ -528,6 +534,7 @@ def run():
                     f"{variant}, reset month {month}",
                     *plot_payload[(variant, month, "pchip")],
                 )
+    SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_PATH.write_text("\n".join(lines) + "\n", encoding="ascii")
     print()
     print("\n".join(lines))

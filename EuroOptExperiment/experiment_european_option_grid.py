@@ -23,7 +23,14 @@ from stage1_lsmc_european import GBMParams, black_scholes_value
 
 OUTPUT_DIR = Path("findings/european_option_grid")
 CSV_PATH = OUTPUT_DIR / "european_option_grid_results.csv"
-SUMMARY_PATH = OUTPUT_DIR / "summary.md"
+SUMMARY_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "Markdown"
+    / "European"
+    / "findings"
+    / "european_option_grid"
+    / "summary.md"
+)
 
 OPTION_TYPES = ["call", "put"]
 STRIKES = [80.0, 100.0, 120.0]
@@ -284,6 +291,7 @@ def write_summary(rows: list[ResultRow], elapsed_seconds: float) -> None:
         ]
     )
 
+    SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_PATH.write_text("\n".join(lines))
 
 

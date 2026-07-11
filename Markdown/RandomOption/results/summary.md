@@ -1,0 +1,19 @@
+# Random Option Proxy Experiment
+
+Fixed-seed random piecewise-linear terminal payoffs under GBM. This is a
+generic one-feature stress test for the interpolation proxy rather than a
+named exchange-traded product.
+
+Best method on this grid: `akima`.
+
+| Method | Worst max relative error | Average p99 | Average MAE |
+|---|---:|---:|---:|
+| pchip | 0.741% | 0.067% | 0.000244 |
+| akima | 0.658% | 0.037% | 0.000171 |
+| chebyshev | 55.459% | 4.911% | 0.246215 |
+
+## Test Grid
+
+- Payoff cases: 8 random piecewise-linear terminal payoffs.
+- Market cases: 3 volatility regimes.
+- Time fractions: 0.0, 0.25, 0.5, 0.75.

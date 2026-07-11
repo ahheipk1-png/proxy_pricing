@@ -40,7 +40,13 @@ OUTPUT_DIR = Path(__file__).resolve().parent / "results"
 PLOT_DIR = OUTPUT_DIR / "plots"
 METHOD_CSV = OUTPUT_DIR / "slv_cliquet_proxy_method_results.csv"
 DETAIL_CSV = OUTPUT_DIR / "slv_cliquet_proxy_validation_details.csv"
-SUMMARY_PATH = OUTPUT_DIR / "summary.md"
+SUMMARY_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "Markdown"
+    / "SLVCliquet"
+    / "results"
+    / "summary.md"
+)
 
 TEST_DAY_INDICES = [0, 3, 6, 9, 12]
 TRAIN_STATES = 321
@@ -686,6 +692,7 @@ def run():
             f"| `{method}` | {100 * item['worst_max']:.3f}% | "
             f"{100 * item['avg_p99']:.3f}% | {item['avg_mae']:.6f} |"
         )
+    SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_PATH.write_text("\n".join(summary) + "\n", encoding="ascii")
     for day_index in TEST_DAY_INDICES:
         draw_plot(

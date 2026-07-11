@@ -14,7 +14,13 @@ import EuroMain as euro
 
 OUTPUT_DIR = Path(__file__).resolve().parent / "results"
 RESULT_CSV = OUTPUT_DIR / "one_dimensional_method_results.csv"
-SUMMARY_PATH = OUTPUT_DIR / "summary.md"
+SUMMARY_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "Markdown"
+    / "MethodStudy"
+    / "results"
+    / "summary.md"
+)
 METHODS = [
     "chebyshev",
     "pchip",
@@ -396,6 +402,7 @@ def run():
                 f"{100 * np.mean([row['p99_rel'] for row in selected]):.3f}% | "
                 f"{np.mean([row['mae'] for row in selected]):.6f} |"
             )
+    SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_PATH.write_text("\n".join(lines) + "\n", encoding="ascii")
     print(f"results: {OUTPUT_DIR}")
 

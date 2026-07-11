@@ -29,7 +29,13 @@ OUTPUT_DIR = Path(__file__).resolve().parent / "results"
 PLOT_DIR = OUTPUT_DIR / "plots"
 METHOD_CSV = OUTPUT_DIR / "american_proxy_method_results.csv"
 DETAIL_CSV = OUTPUT_DIR / "american_proxy_validation_details.csv"
-SUMMARY_PATH = OUTPUT_DIR / "summary.md"
+SUMMARY_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "Markdown"
+    / "American"
+    / "results"
+    / "summary.md"
+)
 
 EXERCISE_STEPS = 100
 TRAIN_STATES = 121
@@ -345,6 +351,7 @@ def run():
             f"| `{method}` | {100 * item['worst_max']:.3f}% | "
             f"{100 * item['avg_p99']:.3f}% | {item['avg_mae']:.6f} |"
         )
+    SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_PATH.write_text("\n".join(lines) + "\n", encoding="ascii")
     for step in TEST_STEP_INDICES:
         benchmark, prediction = predictions[(best, step)]

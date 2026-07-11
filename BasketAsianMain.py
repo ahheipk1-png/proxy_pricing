@@ -41,7 +41,13 @@ OUTPUT_DIR = Path(__file__).resolve().parent / "BasketAsianOptExperiment" / "res
 PLOT_DIR = OUTPUT_DIR / "plots"
 METHOD_CSV = OUTPUT_DIR / "basket_asian_proxy_method_results.csv"
 DETAIL_CSV = OUTPUT_DIR / "basket_asian_proxy_validation_details.csv"
-SUMMARY_PATH = OUTPUT_DIR / "summary.md"
+SUMMARY_PATH = (
+    Path(__file__).resolve().parent
+    / "Markdown"
+    / "BasketAsian"
+    / "results"
+    / "summary.md"
+)
 
 METHODS = [
     "moment_lognormal",
@@ -118,7 +124,9 @@ def correlation_matrix(params):
     raw += np.diag(diag_extra)
     scale = np.sqrt(np.diag(raw))
     corr = raw / scale[:, None] / scale[None, :]
-    return np.clip(corr, -0.85, 0.95)
+    corr = np.clip(corr, -0.85, 0.95)
+    np.fill_diagonal(corr, 1.0)
+    return corr
 
 
 def pca_loadings(params):
@@ -664,6 +672,7 @@ def run():
             f"{100.0 * np.mean([row['p99_rel'] for row in rows]):.3f}% | "
             f"{np.mean([row['mae'] for row in rows]):.6f} |"
         )
+    SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_PATH.write_text("\n".join(lines) + "\n", encoding="ascii")
     print(f"results: {OUTPUT_DIR}")
 

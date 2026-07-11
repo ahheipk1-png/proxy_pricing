@@ -30,7 +30,13 @@ class AsianParams:
 
 OUTPUT_DIR = Path(__file__).resolve().parent / "results"
 PLOT_DIR = OUTPUT_DIR / "plots"
-SUMMARY_PATH = OUTPUT_DIR / "summary.md"
+SUMMARY_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "Markdown"
+    / "Asian"
+    / "results"
+    / "summary.md"
+)
 METHOD_CSV_PATH = OUTPUT_DIR / "asian_proxy_method_results.csv"
 LEGACY_METHOD_CSV_PATH = OUTPUT_DIR / "asian_proxy_results.csv"
 DETAIL_CSV_PATH = OUTPUT_DIR / "asian_proxy_validation_details.csv"
@@ -1225,6 +1231,7 @@ def write_summary(method_rows):
         ]
     )
 
+    SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_PATH.write_text("\n".join(lines))
 
 

@@ -21,7 +21,14 @@ ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results" / "expanded"
 CACHE = RESULTS / "datasets"
 DETAIL_CSV = RESULTS / "expanded_method_results.csv"
-SUMMARY = RESULTS / "summary.md"
+SUMMARY = (
+    ROOT.parent
+    / "Markdown"
+    / "MethodStudy"
+    / "results"
+    / "expanded"
+    / "summary.md"
+)
 RELATIVE_FLOOR = 0.01
 LOG_EPS = 1e-10
 TRAIN_BUDGET = 10_000_000
@@ -546,6 +553,7 @@ def write_results(rows):
                 f"{100 * row['worst_max']:.3f}% | "
                 f"{row['average_mae']:.6f} |"
             )
+    SUMMARY.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY.write_text("\n".join(lines) + "\n", encoding="ascii")
     print("\n".join(lines[: 8 + len(METHODS)]))
     print(f"results: {RESULTS}")
@@ -587,7 +595,14 @@ def main():
         RESULTS = ROOT / "results" / "quick"
         CACHE = RESULTS / "datasets"
         DETAIL_CSV = RESULTS / "expanded_method_results.csv"
-        SUMMARY = RESULTS / "summary.md"
+        SUMMARY = (
+            ROOT.parent
+            / "Markdown"
+            / "MethodStudy"
+            / "results"
+            / "quick"
+            / "summary.md"
+        )
     run(args.quick)
 
 

@@ -19,7 +19,13 @@ from BasketCliquetOptExperiment.LiteratureSurrogateStudy import (
 
 ROOT = Path(__file__).resolve().parent
 OUTPUT = ROOT / "results" / "literature_surrogate_results.csv"
-SUMMARY = ROOT / "results" / "literature_surrogate_summary.md"
+SUMMARY = (
+    ROOT.parent
+    / "Markdown"
+    / "SLVCliquet"
+    / "results"
+    / "literature_surrogate_summary.md"
+)
 DEGREES = (13, 15, 17, 19, 21, 23)
 LOGIT_EPS = 1e-7
 
@@ -310,6 +316,7 @@ def run():
             f"{100 * np.mean([row['p99_rel'] for row in selected]):.3f}% | "
             f"{np.mean([row['mae'] for row in selected]):.6f} |"
         )
+    SUMMARY.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY.write_text("\n".join(lines) + "\n", encoding="ascii")
     print("\n".join(lines))
 

@@ -21,7 +21,13 @@ INDEPENDENT_DETAILS = (
     RESULTS / "basket_slv_cliquet_independent_validation_details.csv"
 )
 OUTPUT = RESULTS / "literature_surrogate_results.csv"
-SUMMARY = RESULTS / "literature_surrogate_summary.md"
+SUMMARY = (
+    ROOT.parent
+    / "Markdown"
+    / "BasketCliquet"
+    / "results"
+    / "literature_surrogate_summary.md"
+)
 METHODS = [
     "normal_moment_baseline",
     "residual_hermite_2001",
@@ -685,6 +691,7 @@ def run():
                 f"| `{variant}` | `{method}` | {100 * worst:.3f}% | "
                 f"{100 * average_p99:.3f}% | {average_mae:.6f} |"
             )
+    SUMMARY.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY.write_text("\n".join(lines) + "\n", encoding="ascii")
     print("\n".join(lines))
 

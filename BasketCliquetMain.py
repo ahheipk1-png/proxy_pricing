@@ -90,7 +90,13 @@ PLOT_DIR = OUTPUT_DIR / "plots"
 METHOD_CSV = OUTPUT_DIR / "basket_slv_cliquet_proxy_method_results.csv"
 DETAIL_CSV = OUTPUT_DIR / "basket_slv_cliquet_proxy_validation_details.csv"
 TRAINING_CSV = OUTPUT_DIR / "basket_slv_cliquet_training_labels.csv"
-SUMMARY_PATH = OUTPUT_DIR / "summary.md"
+SUMMARY_PATH = (
+    Path(__file__).resolve().parent
+    / "Markdown"
+    / "BasketCliquet"
+    / "results"
+    / "summary.md"
+)
 
 
 def remaining_periods(month, params):
@@ -1498,6 +1504,7 @@ def run():
             f"| `{variant}` | `{method}` | {100 * item['worst_max']:.3f}% | "
             f"{100 * item['avg_p99']:.3f}% | {item['avg_mae']:.6f} |"
         )
+    SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_PATH.write_text("\n".join(lines) + "\n", encoding="ascii")
 
     for variant, method in best_methods.items():
