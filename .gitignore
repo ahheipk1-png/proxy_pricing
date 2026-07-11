@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 tmp/
+tools/tectonic/
 OneDimensionalFitExperiment/results/quick/
 .pytest_cache/
 .mypy_cache/

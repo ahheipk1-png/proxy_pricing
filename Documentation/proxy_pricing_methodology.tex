@@ -1,0 +1,640 @@
+\documentclass[11pt,oneside]{book}
+
+\usepackage[letterpaper,margin=1.05in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,longtable,array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!45!black,
+  urlcolor=blue!45!black,
+  citecolor=blue!45!black
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlist[itemize]{leftmargin=1.5em}
+\setlist[enumerate]{leftmargin=1.8em}
+\sloppy
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{remark}{Remark}[chapter]
+
+\newenvironment{proofsteps}
+{\begin{enumerate}[label=\textbf{Line \arabic*.}, itemsep=0.35em]}
+{\end{enumerate}}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\clip}{\operatorname{clip}}
+\newcommand{\se}{\operatorname{SE}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+
+\title{\textbf{Monte Carlo Proxy Pricing}\\
+\large A textbook-style methodology for European, American, Asian, barrier, cliquet, basket Asian, SLV cliquet, basket cliquet, autocallable, and random-payoff proxies}
+\author{Proxy Pricing Research Project}
+\date{\today}
+
+\begin{document}
+\frontmatter
+\maketitle
+\tableofcontents
+
+\chapter*{Reader's Guide}
+This document is written as a second-year undergraduate text. It assumes calculus, linear algebra, basic probability, and a willingness to read a few stochastic-process formulas. The goal is not to hide the implementation behind jargon. The goal is to show exactly how a Monte Carlo price label becomes a fast proxy.
+
+The main chapters explain the workflow. The appendices give line-by-line proofs for the formulas used in the code. Every nontrivial implementation trick is classified as one of:
+\begin{itemize}
+  \item an exact pricing identity,
+  \item an unbiased Monte Carlo variance-reduction identity,
+  \item a numerical approximation whose error must be validated.
+\end{itemize}
+
+\mainmatter
+
+\chapter{The Pricing Problem}
+
+\section{Risk-neutral value}
+Let \(H\) be the payoff of a derivative at maturity or final settlement time \(T\). Under the risk-neutral measure \(\Q\), the time-\(t\) value is
+\[
+  V_t = B_t\,\E_\Q\!\left[\frac{H}{B_T}\,\middle|\,\mathcal F_t\right],
+\]
+where \(B_t=\exp(\int_0^t r_s\dd s)\) is the money-market account. If the short rate is constant,
+\[
+  V_t = e^{-r(T-t)}\E_\Q[H\mid\mathcal F_t].
+\]
+
+In the code, the expensive object is the conditional expectation. The proxy is a fast approximation of the map
+\[
+  x \longmapsto V(t,x),
+\]
+where \(x\) is the state available at the valuation date.
+
+\section{What makes a good proxy state}
+A state is good when it is sufficient, low-dimensional, and scaled sensibly.
+
+\begin{definition}[Sufficient state]
+A vector \(X_t\) is sufficient for pricing if, after conditioning on \(X_t\), the distribution of all future cash flows no longer depends on earlier path history.
+\end{definition}
+
+Examples:
+\begin{itemize}
+  \item European option: \(X_t=S_t\).
+  \item Arithmetic Asian option: \(X_t=(S_t,A_t)\), where \(A_t\) is the running sum of past fixings.
+  \item American put: \(X_t=S_t\), but the time index matters because of remaining exercise dates.
+  \item Barrier option: \(X_t=(S_t,I_t)\), where \(I_t\) says whether the barrier has already been hit.
+  \item Single-name SLV cliquet: \(X_t=(a_t,S_t,v_t)\), accrued coupon, spot, and variance.
+  \item Basket SLV cliquet: \(X_t=(a_t,S_t^{(1:3)},v_t^{(1:3)})\), plus contract variant.
+\end{itemize}
+
+\section{Error decomposition}
+The observed proxy error is not one number with one cause. A useful decomposition is
+\[
+  \widehat V_{\mathrm{proxy}} - V_{\mathrm{true}}
+  =
+  \underbrace{\widehat V_{\mathrm{proxy}} - V_{\mathrm{MC-label}}}_{\text{fitting error}}
+  +
+  \underbrace{V_{\mathrm{MC-label}}-V_{\mathrm{model}}}_{\text{training MC noise}}
+  +
+  \underbrace{V_{\mathrm{model}}-V_{\mathrm{true}}}_{\text{model/discretization error}}.
+\]
+The experiments in this repository mostly study the first two terms under fixed model assumptions.
+
+\chapter{Monte Carlo Label Construction}
+
+\section{Plain estimator}
+For a state \(x\), define the discounted path value
+\[
+  Y(x,Z)=e^{-r\tau}H(x,Z),
+\]
+where \(Z\) represents all future random shocks. The target label is
+\[
+  V(x)=\E[Y(x,Z)].
+\]
+With \(N\) simulated paths,
+\[
+  \widehat V_N(x)=\frac1N\sum_{n=1}^N Y(x,Z_n).
+\]
+The estimator is unbiased when the paths have the correct law. Its standard error is estimated by
+\[
+  \widehat{\se}(\widehat V_N)
+  =
+  \sqrt{\frac{1}{N(N-1)}\sum_{n=1}^N\bigl(Y_n-\overline Y\bigr)^2}.
+\]
+
+\section{Sobol and antithetics}
+Sobol points reduce integration error by filling the unit cube more evenly than independent random points. The implementation rounds the number of paths to a power of two because Sobol nets are naturally balanced in blocks of \(2^m\).
+
+Antithetic pairing uses the fact that, for a standard normal vector \(Z\),
+\[
+  Z \stackrel{d}= -Z.
+\]
+The paired payoff
+\[
+  \frac{f(Z)+f(-Z)}{2}
+\]
+has the same expectation as \(f(Z)\). It often has lower variance for monotone or nearly monotone payoffs.
+
+\section{Likelihood-ratio importance sampling}
+State enrichment and importance sampling are different.
+
+State enrichment changes the distribution of training states \(x_i\). It does not change the path law for any individual conditional expectation.
+
+Importance sampling changes the path density from \(p\) to \(q\) and multiplies by a likelihood ratio:
+\[
+  \E_p[h(Z)]
+  =
+  \E_q\!\left[h(Z)\frac{p(Z)}{q(Z)}\right].
+\]
+For a normal mean shift, \(q(z)=\phi(z-\theta)\), so
+\[
+  \frac{p(z)}{q(z)}
+  =
+  \exp\!\left(-\theta z+\frac12\theta^2\right).
+\]
+This identity is exact; its usefulness depends on variance.
+
+\section{Control variates}
+If \(C\) has known mean \(m_C\), then
+\[
+  Y_\beta = Y-\beta(C-m_C)
+\]
+has the same expectation as \(Y\). The variance-minimizing coefficient is
+\[
+  \beta^\star=\frac{\Cov(Y,C)}{\Var(C)}.
+\]
+Asian options use a geometric Asian control when the arithmetic payoff and geometric payoff are strongly correlated.
+
+\chapter{Proxy Fitting Principles}
+
+\section{Targets}
+Raw prices can be hard to fit because they range from nearly zero to almost linear. The code uses transformations such as:
+\[
+  \log(V+\varepsilon),\qquad
+  \log\frac{V+\varepsilon}{B+\varepsilon},\qquad
+  \operatorname{logit}\frac{V-L}{U-L}.
+\]
+Here \(B\) is a baseline, and \(L,U\) are known lower and upper bounds.
+
+\section{Exact regions}
+Never ask a regressor to learn something known analytically.
+
+Examples:
+\begin{itemize}
+  \item At maturity, use the payoff exactly.
+  \item Deep Asian call in-the-money region: the positive part disappears and the value is linear.
+  \item Cliquet global floor/cap tails: the final clipped payoff is already known.
+  \item American/Bermudan exercise: impose \(V=\max(\text{intrinsic},\text{continuation})\).
+\end{itemize}
+
+\section{Relative error floor}
+The reported relative error is
+\[
+  e_{\mathrm{rel}}
+  =
+  \frac{|\widehat V-V|}{\max(|V|,\eta)}.
+\]
+This is ordinary relative error when \(|V|\ge \eta\), and it avoids meaningless exploding percentages when \(V\) is tiny.
+
+\chapter{One-Dimensional Shape-Preserving Proxies}
+
+\section{Why PCHIP is the default for 1D}
+For a single feature, PCHIP is a strong operational default:
+\begin{itemize}
+  \item it interpolates labels exactly;
+  \item it is local, so one noisy point does not create global oscillation;
+  \item it preserves monotone shape when the data are monotone;
+  \item it behaves well near exercise kinks, barrier transitions, and low-value tails.
+\end{itemize}
+
+\section{Cubic Hermite form}
+On \([x_i,x_{i+1}]\), let \(h_i=x_{i+1}-x_i\), \(t=(x-x_i)/h_i\). A cubic Hermite segment is
+\[
+\begin{aligned}
+H_i(t)
+&=y_i(2t^3-3t^2+1)
+  +h_i d_i(t^3-2t^2+t)\\
+&\quad
+  +y_{i+1}(-2t^3+3t^2)
+  +h_i d_{i+1}(t^3-t^2).
+\end{aligned}
+\]
+PCHIP chooses slopes \(d_i\) from neighboring secants in a way that prevents artificial extrema.
+
+\section{Akima, splines, and Bernstein}
+Akima interpolation is also local and robust to outliers. Natural cubic splines are smoother but can overshoot. Bernstein polynomials are shape-friendly on bounded intervals and were competitive for some barrier variants. For one-dimensional production defaults, the current rule is:
+\[
+  \text{PCHIP first, compare Akima/Bernstein when the validation surface says so.}
+\]
+
+\chapter{Sparse Chebyshev and Higher Dimension}
+
+\section{Chebyshev scaling}
+Chebyshev polynomials satisfy
+\[
+  T_n(\cos\theta)=\cos(n\theta),
+\]
+so \(|T_n(x)|\le 1\) for \(x\in[-1,1]\). This is why features are scaled before fitting:
+\[
+  z_j = 2\frac{x_j-\ell_j}{u_j-\ell_j}-1.
+\]
+
+\section{Ridge regression}
+Given a design matrix \(A\), labels \(y\), and penalty matrix \(\Gamma\), ridge regression solves
+\[
+  \min_\beta \|A\beta-y\|_2^2+\lambda\|\Gamma\beta\|_2^2.
+\]
+The normal equation is
+\[
+  (A^\top A+\lambda\Gamma^\top\Gamma)\beta=A^\top y.
+\]
+
+\section{Why sparsity is necessary}
+A full tensor degree-\(p\) basis in \(D\) variables contains \((p+1)^D\) terms. With \(D=7\) and \(p=5\), that is \(279{,}936\) terms before fitting. Basket cliquet therefore needs sparse terms, payoff-aware features, or a slower safety method.
+
+\chapter{Instrument Recipes}
+
+\section{European option}
+State: \(S\). Coordinate:
+\[
+  d_1=\frac{\log(S/K)+(r-q+\tfrac12\sigma^2)\tau}{\sigma\sqrt{\tau}}.
+\]
+Training labels use shifted Sobol terminal GBM paths. Validation uses Black-Scholes:
+\[
+  C=S e^{-q\tau}\Phi(d_1)-K e^{-r\tau}\Phi(d_2),\qquad d_2=d_1-\sigma\sqrt{\tau}.
+\]
+Default proxy: log price fitted by PCHIP in \(d_1\).
+
+\section{Arithmetic Asian option}
+State: \(S\) and running sum \(A\). With \(m\) future fixings and total \(N\),
+\[
+  K_{\mathrm{adj}}=\frac{NK-A-S}{m}.
+\]
+The call payoff can be rewritten as
+\[
+  \left(\frac{A+S+\sum_{j=1}^m S G_j}{N}-K\right)_+
+  =
+  S\frac{m}{N}\left(\frac1m\sum_{j=1}^mG_j-\frac{K_{\mathrm{adj}}}{S}\right)_+.
+\]
+Thus the tested monthly call can be represented by an adjusted-moneyness coordinate. Training uses Sobol antithetics, likelihood shifts where useful, and a geometric Asian control variate.
+
+\section{Ten-asset basket Asian}
+State: ten spots plus the running basket sum. The proxy starts from a moment-matched lognormal baseline for the final arithmetic basket average, then fits a sparse Chebyshev/PCA correction and a PCHIP residual calibration. PCA summarizes cross-sectional composition without throwing away the level and running-sum information.
+
+\section{American and Bermudan options}
+At each exercise date \(k\),
+\[
+  V_k(S)=\max\!\left(g_k(S),\,e^{-r\Delta t}\E[V_{k+1}(S_{k+1})\mid S_k=S]\right).
+\]
+The continuation value is estimated by one-step Sobol transitions and fitted with PCHIP. The max with intrinsic value is imposed exactly.
+
+\section{Barrier option}
+For a zero-rebate barrier,
+\[
+  V_{\mathrm{in}}+V_{\mathrm{out}}=V_{\mathrm{vanilla}}.
+\]
+Discrete monitoring checks simulated observation dates. Continuous monitoring uses Brownian-bridge survival between observations. For a lower log barrier \(b\), endpoints \(x,y>b\), and variance \(\sigma^2\Delta t\),
+\[
+  P(\text{survive}\mid x,y)=1-\exp\!\left(-\frac{2(x-b)(y-b)}{\sigma^2\Delta t}\right).
+\]
+
+\section{Cliquet and SLV cliquet}
+Cliquet payoffs are bounded by local and global caps/floors. If accrued value \(a\) and \(m\) remaining coupons imply the final total is certainly below the global floor or above the global cap, the value is exact.
+
+For single-name SLV cliquet, the state is \((a,S,v)\). The proxy uses exact tails, bounded-logit targets, and local/sparse Chebyshev features. For three-asset basket cliquet, the fitted proxy is not universally enough for strict max-error control; hard order-statistic cases use a cached Sobol/LR safety proxy.
+
+\section{Autocallable and random payoff}
+Autocallable valuation is naturally date-indexed. The state is spot at an observation date; the cash-flow rule determines whether the note redeems early or continues. Random payoff tests are synthetic one-dimensional payoffs used to stress interpolation under different shapes.
+
+\chapter{Validation and Timing}
+
+\section{Independent benchmark principle}
+Training labels and benchmark labels use separate random streams. Benchmarks use more paths, closed forms, finite differences, or tree methods when available.
+
+\section{Current reporting}
+The timing report separates:
+\begin{itemize}
+  \item training sample generation;
+  \item proxy fitting after labels are available;
+  \item option-family wall time;
+  \item average wall time per scenario.
+\end{itemize}
+The reduced-budget smoke accuracy columns in the timing report are diagnostic only. The product-specific markdown summaries remain the full-budget accuracy source.
+
+\appendix
+
+\chapter{Line-by-Line Proofs: Monte Carlo}
+
+\section{Unbiased sample mean}
+\begin{proofsteps}
+\item Define \(Y=e^{-r\tau}H\) and \(V=\E_\Q[Y]\).
+\item Define \(\widehat V_N=N^{-1}\sum_{n=1}^N Y_n\).
+\item Apply linearity:
+\[
+\E[\widehat V_N]
+=\E\!\left[\frac1N\sum_{n=1}^N Y_n\right]
+=\frac1N\sum_{n=1}^N\E[Y_n]
+=\frac1N\sum_{n=1}^N V
+=V.
+\]
+\item If paths are independent with variance \(\sigma_Y^2\),
+\[
+\Var(\widehat V_N)
+=\Var\!\left(\frac1N\sum_{n=1}^N Y_n\right)
+=\frac1{N^2}\sum_{n=1}^N\Var(Y_n)
+=\frac{\sigma_Y^2}{N}.
+\]
+\item Replace \(\sigma_Y^2\) by the sample variance to estimate standard error.
+\end{proofsteps}
+
+\section{Likelihood-ratio shift}
+\begin{proofsteps}
+\item Start with \(V=\int h(z)p(z)\dd z\).
+\item Choose a proposal \(q\) with \(q(z)>0\) wherever \(h(z)p(z)\neq 0\).
+\item Multiply and divide by \(q\):
+\[
+V=\int h(z)\frac{p(z)}{q(z)}q(z)\dd z
+=\E_q[h(Z)L(Z)],\qquad L(Z)=\frac{p(Z)}{q(Z)}.
+\]
+\item For \(p(z)=\phi(z)\), \(q(z)=\phi(z-\theta)\),
+\[
+L(z)
+=\frac{\exp(-z^2/2)}{\exp(-(z-\theta)^2/2)}
+=\exp\!\left(-\theta z+\frac{\theta^2}{2}\right).
+\]
+\item For independent shocks, likelihood ratios multiply:
+\[
+L(z_1,\ldots,z_m)
+=\prod_{j=1}^m\exp\!\left(-\theta_j z_j+\frac{\theta_j^2}{2}\right).
+\]
+\end{proofsteps}
+
+\section{Antithetic estimator}
+\begin{proofsteps}
+\item Standard normal symmetry gives \(Z\stackrel d=-Z\).
+\item Define \(A=(f(Z)+f(-Z))/2\).
+\item Then
+\[
+\E[A]=\frac{\E[f(Z)]+\E[f(-Z)]}{2}
+=\frac{\E[f(Z)]+\E[f(Z)]}{2}
+=\E[f(Z)].
+\]
+\item The variance is
+\[
+\Var(A)=\frac12\Var(f(Z))+\frac12\Cov(f(Z),f(-Z)).
+\]
+\item The pairing helps whenever the covariance term is negative.
+\end{proofsteps}
+
+\chapter{Line-by-Line Proofs: GBM and European Options}
+
+\section{GBM solution}
+\begin{proofsteps}
+\item Start from \(\dd S_t/S_t=(r-q)\dd t+\sigma\dd W_t\).
+\item Apply Ito's lemma to \(f(S)=\log S\):
+\[
+\dd\log S_t
+=\frac1{S_t}\dd S_t-\frac12\frac1{S_t^2}(\dd S_t)^2.
+\]
+\item Since \((\dd S_t)^2=\sigma^2S_t^2\dd t\),
+\[
+\dd\log S_t=(r-q-\tfrac12\sigma^2)\dd t+\sigma\dd W_t.
+\]
+\item Integrate over \([t,T]\):
+\[
+\log(S_T/S_t)=(r-q-\tfrac12\sigma^2)\tau+\sigma(W_T-W_t).
+\]
+\item Use \(W_T-W_t=\sqrt{\tau}Z\), \(Z\sim N(0,1)\), and exponentiate.
+\end{proofsteps}
+
+\section{Black-Scholes call}
+\begin{proofsteps}
+\item Risk-neutral pricing:
+\[
+C=e^{-r\tau}\E[(S_T-K)_+].
+\]
+\item Split the positive part:
+\[
+\E[(S_T-K)_+]
+=\E[S_T\mathbf 1_{\{S_T>K\}}]-K\Q(S_T>K).
+\]
+\item The event \(S_T>K\) is \(Z>-d_2\), so \(\Q(S_T>K)=\Phi(d_2)\).
+\item Completing the square gives
+\[
+\E[S_T\mathbf 1_{\{S_T>K\}}]
+=S e^{(r-q)\tau}\Phi(d_1).
+\]
+\item Substitute and discount:
+\[
+C=S e^{-q\tau}\Phi(d_1)-K e^{-r\tau}\Phi(d_2).
+\]
+\end{proofsteps}
+
+\chapter{Line-by-Line Proofs: Asian State Reduction}
+
+\section{Adjusted moneyness}
+\begin{proofsteps}
+\item At a valuation date, write future fixings as \(S G_1,\ldots,S G_m\).
+\item The arithmetic average is
+\[
+\bar S=\frac{A+S+S\sum_{j=1}^mG_j}{N}.
+\]
+\item Define
+\[
+K_{\rm adj}=\frac{NK-A-S}{m}.
+\]
+\item Rewrite the call payoff:
+\[
+(\bar S-K)_+
+=\frac1N\left(A+S+S\sum_{j=1}^mG_j-NK\right)_+
+=\frac{m}{N}\left(S\frac1m\sum_{j=1}^mG_j-K_{\rm adj}\right)_+.
+\]
+\item Factor out \(S>0\):
+\[
+(\bar S-K)_+
+=S\frac{m}{N}\left(\frac1m\sum_{j=1}^mG_j-\frac{K_{\rm adj}}{S}\right)_+.
+\]
+\item Under GBM the growth factors \(G_j\) do not depend on the current spot level \(S\).
+\item Therefore \(V(S,A)=S F(K_{\rm adj}/S,t)\), which justifies a one-dimensional adjusted-moneyness proxy for the tested call setup.
+\end{proofsteps}
+
+\chapter{Line-by-Line Proofs: Barriers}
+
+\section{In/out parity}
+\begin{proofsteps}
+\item Split all paths into two disjoint events: hit and no hit.
+\item On hit paths, the knock-in pays the vanilla payoff and the knock-out pays zero.
+\item On no-hit paths, the knock-out pays the vanilla payoff and the knock-in pays zero.
+\item Therefore, path by path,
+\[
+H_{\rm in}+H_{\rm out}=H_{\rm vanilla}.
+\]
+\item Discount and take expectations:
+\[
+V_{\rm in}+V_{\rm out}=V_{\rm vanilla}.
+\]
+\end{proofsteps}
+
+\section{Brownian-bridge lower-barrier survival}
+\begin{proofsteps}
+\item Condition on log endpoints \(X_0=x\), \(X_{\Delta t}=y\), both above lower barrier \(b\).
+\item By the reflection principle, the conditional probability of crossing below \(b\) is
+\[
+\exp\!\left(-\frac{2(x-b)(y-b)}{\sigma^2\Delta t}\right).
+\]
+\item Survival is one minus crossing:
+\[
+P_{\rm surv}=1-\exp\!\left(-\frac{2(x-b)(y-b)}{\sigma^2\Delta t}\right).
+\]
+\item Conditional survival over many intervals is the product of interval survival probabilities.
+\end{proofsteps}
+
+\chapter{Line-by-Line Proofs: Exercise and Cliquet Bounds}
+
+\section{American recursion}
+\begin{proofsteps}
+\item At final date \(M\), \(V_M(S)=g_M(S)\).
+\item Suppose \(V_{k+1}\) is known.
+\item Continuing from date \(k\) has value
+\[
+C_k(S)=e^{-r\Delta t}\E[V_{k+1}(S_{k+1})\mid S_k=S].
+\]
+\item Stopping immediately has value \(g_k(S)\).
+\item The holder chooses the larger:
+\[
+V_k(S)=\max(g_k(S),C_k(S)).
+\]
+\item Backward induction proves optimality at every date.
+\end{proofsteps}
+
+\section{Cliquet exact tails}
+\begin{proofsteps}
+\item Let current accrued return be \(a\), with \(m\) future local coupons.
+\item Each future coupon lies in \([\ell,u]\).
+\item Therefore final accumulated return lies in
+\[
+a+\sum_{j=1}^m c_j \in [a+m\ell,\;a+mu].
+\]
+\item If \(a+mu\) is below the global floor, the payoff is exactly the global floor.
+\item If \(a+m\ell\) is above the global cap, the payoff is exactly the global cap.
+\item These states need no regression and no simulation.
+\end{proofsteps}
+
+\chapter{Line-by-Line Proofs: PCHIP}
+
+\section{Unique Hermite cubic}
+\begin{proofsteps}
+\item A cubic has four coefficients.
+\item Endpoint value constraints give two linear equations.
+\item Endpoint slope constraints give two more linear equations.
+\item The Hermite basis constructs one solution:
+\[
+H(t)=y_i h_{00}(t)+h_i d_i h_{10}(t)+y_{i+1}h_{01}(t)+h_i d_{i+1}h_{11}(t).
+\]
+\item If two cubics satisfied all four conditions, their difference would have double roots at both endpoints.
+\item A nonzero cubic cannot have four roots counting multiplicity, so the solution is unique.
+\end{proofsteps}
+
+\section{Why PCHIP avoids artificial extrema}
+\begin{proofsteps}
+\item Let \(\delta_i=(y_{i+1}-y_i)/h_i\).
+\item If neighboring secants change sign, PCHIP sets the node slope to zero.
+\item If neighboring secants have the same sign, PCHIP uses the weighted harmonic mean
+\[
+d_i=\frac{w_1+w_2}{w_1/\delta_{i-1}+w_2/\delta_i}.
+\]
+\item This slope has the same sign as the neighboring secants and lies between their magnitudes.
+\item On a monotone interval, the derivative of the Hermite cubic is a quadratic whose normalized endpoint slopes satisfy the Fritsch-Carlson monotonicity inequalities.
+\item Therefore the derivative does not change sign inside the interval.
+\item Hence the interpolant cannot create a new local maximum or minimum between two monotone data points.
+\end{proofsteps}
+
+\chapter{Line-by-Line Proofs: Sparse Chebyshev Ridge}
+
+\section{Chebyshev boundedness}
+\begin{proofsteps}
+\item Every \(x\in[-1,1]\) can be written as \(x=\cos\theta\).
+\item Define \(T_n(x)=\cos(n\theta)\).
+\item Since \(|\cos(n\theta)|\le1\),
+\[
+|T_n(x)|\le1,\qquad x\in[-1,1].
+\]
+\item Scaling state variables to \([-1,1]\) keeps basis columns numerically bounded.
+\end{proofsteps}
+
+\section{Ridge normal equation}
+\begin{proofsteps}
+\item Objective:
+\[
+J(\beta)=\|A\beta-y\|_2^2+\lambda\|\Gamma\beta\|_2^2.
+\]
+\item Differentiate:
+\[
+\nabla J(\beta)=2A^\top(A\beta-y)+2\lambda\Gamma^\top\Gamma\beta.
+\]
+\item Set the gradient to zero:
+\[
+A^\top A\beta-A^\top y+\lambda\Gamma^\top\Gamma\beta=0.
+\]
+\item Rearrange:
+\[
+(A^\top A+\lambda\Gamma^\top\Gamma)\beta=A^\top y.
+\]
+\item The left matrix is positive semidefinite, and ridge makes unsupported directions stable.
+\end{proofsteps}
+
+\chapter{Line-by-Line Proofs: Bounded Targets and Metrics}
+
+\section{Logit bounded target}
+\begin{proofsteps}
+\item Suppose the price must lie in \([L,U]\).
+\item Fit an unconstrained number \(y\) and map it through the logistic function:
+\[
+u(y)=\frac{1}{1+e^{-y}}.
+\]
+\item Because \(e^{-y}>0\), \(0<u(y)<1\).
+\item Rescale:
+\[
+\widehat V=L+(U-L)u(y).
+\]
+\item Therefore \(L<\widehat V<U\).
+\end{proofsteps}
+
+\section{Relative-error floor}
+\begin{proofsteps}
+\item Define
+\[
+e_{\rm rel}=\frac{|\widehat V-V|}{\max(|V|,\eta)},\qquad \eta>0.
+\]
+\item If \(|V|\ge\eta\), this is ordinary relative error.
+\item If \(|V|<\eta\), then
+\[
+e_{\rm rel}=\frac{|\widehat V-V|}{\eta}.
+\]
+\item Thus a nearly zero benchmark cannot create an infinite percentage error.
+\end{proofsteps}
+
+\backmatter
+\chapter{References}
+\begin{itemize}
+  \item Black, F. and Scholes, M. (1973). The Pricing of Options and Corporate Liabilities. \emph{Journal of Political Economy}.
+  \item Fritsch, F. N. and Carlson, R. E. (1980). Monotone Piecewise Cubic Interpolation. \emph{SIAM Journal on Numerical Analysis}.
+  \item Fritsch, F. N. and Butland, J. (1984). A Method for Constructing Local Monotone Piecewise Cubic Interpolants. \emph{SIAM Journal on Scientific and Statistical Computing}.
+  \item Hoerl, A. E. and Kennard, R. W. (1970). Ridge Regression: Biased Estimation for Nonorthogonal Problems. \emph{Technometrics}.
+  \item Glasserman, P. (2004). \emph{Monte Carlo Methods in Financial Engineering}. Springer.
+  \item Glasserman, P. and Staum, J. (2001). Conditioning on One-Step Survival for Barrier Option Simulations. \emph{Operations Research}.
+  \item Broadie, M., Glasserman, P., and Kou, S. G. (1997). A Continuity Correction for Discrete Barrier Options. \emph{Mathematical Finance}.
+\end{itemize}
+
+\end{document}

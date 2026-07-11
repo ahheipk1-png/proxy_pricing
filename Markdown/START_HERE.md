@@ -11,7 +11,8 @@ changing code or rerunning heavy experiments.
 - Markdown notes are centralized in this `Markdown/` folder.
 - Generated CSV files, plots, caches, and temporary files should stay out of the
   public repository unless the user explicitly asks otherwise.
-- The main PDF is `output/pdf/proxy_pricing_methodology.pdf`.
+- The main PDF is `output/pdf/proxy_pricing_methodology.pdf`, generated from
+  `Documentation/proxy_pricing_methodology.tex` with Tectonic.
 
 ## Recommended Read Order
 
