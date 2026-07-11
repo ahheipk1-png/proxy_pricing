@@ -217,6 +217,27 @@ python ProxyCorrectnessTests.py
 These tests cover European, Asian, American, barrier, cliquet, SLV cliquet,
 basket Asian, basket cliquet, autocallable, Bermudan, and random payoff cases.
 
+Generate the representative timing/performance table with:
+
+```powershell
+python ProxyTimingBenchmark.py
+```
+
+The timing benchmark uses multiple worker processes by default. Override the
+worker count with:
+
+```powershell
+$env:PROXY_BENCHMARK_WORKERS = "8"
+python ProxyTimingBenchmark.py
+```
+
+Generate the expanded coverage report, which asserts at least 100 cases per
+option type, with:
+
+```powershell
+python ProxyExpandedCoverageTests.py
+```
+
 ## Methodology Guide
 
 The detailed mathematical and implementation guide is:

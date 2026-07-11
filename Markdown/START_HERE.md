@@ -25,7 +25,9 @@ changing code or rerunning heavy experiments.
 8. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
 9. `MethodStudy/results/current_performance_matrix.md`
 10. `MethodStudy/results/correctness_tests.md`
-11. Product result summaries under `*/results/summary.md`
+11. `MethodStudy/results/timing_performance_summary.md`
+12. `MethodStudy/results/expanded_coverage_summary.md`
+13. Product result summaries under `*/results/summary.md`
 
 ## Important Current Decisions
 

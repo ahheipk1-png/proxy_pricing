@@ -1,0 +1,1434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Expanded Proxy Coverage Summary</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 28px; color: #17202a; }
+    table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 14px; }
+    th, td { border: 1px solid #d7dde3; padding: 8px 10px; vertical-align: top; }
+    th { background: #f2f5f8; text-align: left; }
+    .num { text-align: right; }
+    code { background: #f2f5f8; padding: 1px 4px; border-radius: 3px; }
+    section { margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h1 id="top">Expanded Proxy Coverage Summary</h1>
+  <p>Every option family must have at least 100 executed coverage cases.</p>
+  <table>
+    <thead><tr><th>Option type</th><th>Cases executed</th><th>Status</th><th>Details</th></tr></thead>
+    <tbody><tr><td>American</td><td class='num'>108</td><td>PASS</td><td><a href='#american-expanded'>view subtests</a></td></tr><tr><td>Asian</td><td class='num'>216</td><td>PASS</td><td><a href='#asian-expanded'>view subtests</a></td></tr><tr><td>Autocallable</td><td class='num'>125</td><td>PASS</td><td><a href='#autocallable-expanded'>view subtests</a></td></tr><tr><td>Barrier</td><td class='num'>360</td><td>PASS</td><td><a href='#barrier-expanded'>view subtests</a></td></tr><tr><td>Basket Asian</td><td class='num'>120</td><td>PASS</td><td><a href='#basket-asian-expanded'>view subtests</a></td></tr><tr><td>Basket cliquet</td><td class='num'>120</td><td>PASS</td><td><a href='#basket-cliquet-expanded'>view subtests</a></td></tr><tr><td>Bermudan</td><td class='num'>108</td><td>PASS</td><td><a href='#bermudan-expanded'>view subtests</a></td></tr><tr><td>Cliquet</td><td class='num'>120</td><td>PASS</td><td><a href='#cliquet-expanded'>view subtests</a></td></tr><tr><td>European</td><td class='num'>144</td><td>PASS</td><td><a href='#european-expanded'>view subtests</a></td></tr><tr><td>Random payoff</td><td class='num'>288</td><td>PASS</td><td><a href='#random-payoff-expanded'>view subtests</a></td></tr><tr><td>SLV cliquet</td><td class='num'>125</td><td>PASS</td><td><a href='#slv-cliquet-expanded'>view subtests</a></td></tr></tbody>
+  </table>
+  <section id='american-expanded'><h2>American</h2><ul><li><code>K=80.0, vol=0.15, r=0.01, S=60.0</code></li>
+<li><code>K=80.0, vol=0.15, r=0.01, S=100.0</code></li>
+<li><code>K=80.0, vol=0.15, r=0.01, S=160.0</code></li>
+<li><code>K=80.0, vol=0.15, r=0.04, S=60.0</code></li>
+<li><code>K=80.0, vol=0.15, r=0.04, S=100.0</code></li>
+<li><code>K=80.0, vol=0.15, r=0.04, S=160.0</code></li>
+<li><code>K=80.0, vol=0.15, r=0.07, S=60.0</code></li>
+<li><code>K=80.0, vol=0.15, r=0.07, S=100.0</code></li>
+<li><code>K=80.0, vol=0.15, r=0.07, S=160.0</code></li>
+<li><code>K=80.0, vol=0.25, r=0.01, S=60.0</code></li>
+<li><code>K=80.0, vol=0.25, r=0.01, S=100.0</code></li>
+<li><code>K=80.0, vol=0.25, r=0.01, S=160.0</code></li>
+<li><code>K=80.0, vol=0.25, r=0.04, S=60.0</code></li>
+<li><code>K=80.0, vol=0.25, r=0.04, S=100.0</code></li>
+<li><code>K=80.0, vol=0.25, r=0.04, S=160.0</code></li>
+<li><code>K=80.0, vol=0.25, r=0.07, S=60.0</code></li>
+<li><code>K=80.0, vol=0.25, r=0.07, S=100.0</code></li>
+<li><code>K=80.0, vol=0.25, r=0.07, S=160.0</code></li>
+<li><code>K=80.0, vol=0.4, r=0.01, S=60.0</code></li>
+<li><code>K=80.0, vol=0.4, r=0.01, S=100.0</code></li>
+<li><code>K=80.0, vol=0.4, r=0.01, S=160.0</code></li>
+<li><code>K=80.0, vol=0.4, r=0.04, S=60.0</code></li>
+<li><code>K=80.0, vol=0.4, r=0.04, S=100.0</code></li>
+<li><code>K=80.0, vol=0.4, r=0.04, S=160.0</code></li>
+<li><code>K=80.0, vol=0.4, r=0.07, S=60.0</code></li>
+<li><code>K=80.0, vol=0.4, r=0.07, S=100.0</code></li>
+<li><code>K=80.0, vol=0.4, r=0.07, S=160.0</code></li>
+<li><code>K=100.0, vol=0.15, r=0.01, S=60.0</code></li>
+<li><code>K=100.0, vol=0.15, r=0.01, S=100.0</code></li>
+<li><code>K=100.0, vol=0.15, r=0.01, S=160.0</code></li>
+<li><code>K=100.0, vol=0.15, r=0.04, S=60.0</code></li>
+<li><code>K=100.0, vol=0.15, r=0.04, S=100.0</code></li>
+<li><code>K=100.0, vol=0.15, r=0.04, S=160.0</code></li>
+<li><code>K=100.0, vol=0.15, r=0.07, S=60.0</code></li>
+<li><code>K=100.0, vol=0.15, r=0.07, S=100.0</code></li>
+<li><code>K=100.0, vol=0.15, r=0.07, S=160.0</code></li>
+<li><code>K=100.0, vol=0.25, r=0.01, S=60.0</code></li>
+<li><code>K=100.0, vol=0.25, r=0.01, S=100.0</code></li>
+<li><code>K=100.0, vol=0.25, r=0.01, S=160.0</code></li>
+<li><code>K=100.0, vol=0.25, r=0.04, S=60.0</code></li>
+<li><code>K=100.0, vol=0.25, r=0.04, S=100.0</code></li>
+<li><code>K=100.0, vol=0.25, r=0.04, S=160.0</code></li>
+<li><code>K=100.0, vol=0.25, r=0.07, S=60.0</code></li>
+<li><code>K=100.0, vol=0.25, r=0.07, S=100.0</code></li>
+<li><code>K=100.0, vol=0.25, r=0.07, S=160.0</code></li>
+<li><code>K=100.0, vol=0.4, r=0.01, S=60.0</code></li>
+<li><code>K=100.0, vol=0.4, r=0.01, S=100.0</code></li>
+<li><code>K=100.0, vol=0.4, r=0.01, S=160.0</code></li>
+<li><code>K=100.0, vol=0.4, r=0.04, S=60.0</code></li>
+<li><code>K=100.0, vol=0.4, r=0.04, S=100.0</code></li>
+<li><code>K=100.0, vol=0.4, r=0.04, S=160.0</code></li>
+<li><code>K=100.0, vol=0.4, r=0.07, S=60.0</code></li>
+<li><code>K=100.0, vol=0.4, r=0.07, S=100.0</code></li>
+<li><code>K=100.0, vol=0.4, r=0.07, S=160.0</code></li>
+<li><code>K=120.0, vol=0.15, r=0.01, S=60.0</code></li>
+<li><code>K=120.0, vol=0.15, r=0.01, S=100.0</code></li>
+<li><code>K=120.0, vol=0.15, r=0.01, S=160.0</code></li>
+<li><code>K=120.0, vol=0.15, r=0.04, S=60.0</code></li>
+<li><code>K=120.0, vol=0.15, r=0.04, S=100.0</code></li>
+<li><code>K=120.0, vol=0.15, r=0.04, S=160.0</code></li>
+<li><code>K=120.0, vol=0.15, r=0.07, S=60.0</code></li>
+<li><code>K=120.0, vol=0.15, r=0.07, S=100.0</code></li>
+<li><code>K=120.0, vol=0.15, r=0.07, S=160.0</code></li>
+<li><code>K=120.0, vol=0.25, r=0.01, S=60.0</code></li>
+<li><code>K=120.0, vol=0.25, r=0.01, S=100.0</code></li>
+<li><code>K=120.0, vol=0.25, r=0.01, S=160.0</code></li>
+<li><code>K=120.0, vol=0.25, r=0.04, S=60.0</code></li>
+<li><code>K=120.0, vol=0.25, r=0.04, S=100.0</code></li>
+<li><code>K=120.0, vol=0.25, r=0.04, S=160.0</code></li>
+<li><code>K=120.0, vol=0.25, r=0.07, S=60.0</code></li>
+<li><code>K=120.0, vol=0.25, r=0.07, S=100.0</code></li>
+<li><code>K=120.0, vol=0.25, r=0.07, S=160.0</code></li>
+<li><code>K=120.0, vol=0.4, r=0.01, S=60.0</code></li>
+<li><code>K=120.0, vol=0.4, r=0.01, S=100.0</code></li>
+<li><code>K=120.0, vol=0.4, r=0.01, S=160.0</code></li>
+<li><code>K=120.0, vol=0.4, r=0.04, S=60.0</code></li>
+<li><code>K=120.0, vol=0.4, r=0.04, S=100.0</code></li>
+<li><code>K=120.0, vol=0.4, r=0.04, S=160.0</code></li>
+<li><code>K=120.0, vol=0.4, r=0.07, S=60.0</code></li>
+<li><code>K=120.0, vol=0.4, r=0.07, S=100.0</code></li>
+<li><code>K=120.0, vol=0.4, r=0.07, S=160.0</code></li>
+<li><code>K=140.0, vol=0.15, r=0.01, S=60.0</code></li>
+<li><code>K=140.0, vol=0.15, r=0.01, S=100.0</code></li>
+<li><code>K=140.0, vol=0.15, r=0.01, S=160.0</code></li>
+<li><code>K=140.0, vol=0.15, r=0.04, S=60.0</code></li>
+<li><code>K=140.0, vol=0.15, r=0.04, S=100.0</code></li>
+<li><code>K=140.0, vol=0.15, r=0.04, S=160.0</code></li>
+<li><code>K=140.0, vol=0.15, r=0.07, S=60.0</code></li>
+<li><code>K=140.0, vol=0.15, r=0.07, S=100.0</code></li>
+<li><code>K=140.0, vol=0.15, r=0.07, S=160.0</code></li>
+<li><code>K=140.0, vol=0.25, r=0.01, S=60.0</code></li>
+<li><code>K=140.0, vol=0.25, r=0.01, S=100.0</code></li>
+<li><code>K=140.0, vol=0.25, r=0.01, S=160.0</code></li>
+<li><code>K=140.0, vol=0.25, r=0.04, S=60.0</code></li>
+<li><code>K=140.0, vol=0.25, r=0.04, S=100.0</code></li>
+<li><code>K=140.0, vol=0.25, r=0.04, S=160.0</code></li>
+<li><code>K=140.0, vol=0.25, r=0.07, S=60.0</code></li>
+<li><code>K=140.0, vol=0.25, r=0.07, S=100.0</code></li>
+<li><code>K=140.0, vol=0.25, r=0.07, S=160.0</code></li>
+<li><code>K=140.0, vol=0.4, r=0.01, S=60.0</code></li>
+<li><code>K=140.0, vol=0.4, r=0.01, S=100.0</code></li>
+<li><code>K=140.0, vol=0.4, r=0.01, S=160.0</code></li>
+<li><code>K=140.0, vol=0.4, r=0.04, S=60.0</code></li>
+<li><code>K=140.0, vol=0.4, r=0.04, S=100.0</code></li>
+<li><code>K=140.0, vol=0.4, r=0.04, S=160.0</code></li>
+<li><code>K=140.0, vol=0.4, r=0.07, S=60.0</code></li>
+<li><code>K=140.0, vol=0.4, r=0.07, S=100.0</code></li>
+<li><code>K=140.0, vol=0.4, r=0.07, S=160.0</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='asian-expanded'><h2>Asian</h2><p>Showing first 150 of 216 cases.</p><ul><li><code>K=80.0, vol=0.15, day=0, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.15, day=0, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.15, day=0, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.15, day=3, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.15, day=3, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.15, day=3, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.15, day=6, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.15, day=6, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.15, day=6, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.15, day=9, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.15, day=9, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.15, day=9, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.15, day=10, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.15, day=10, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.15, day=10, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.15, day=11, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.15, day=11, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.15, day=11, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.25, day=0, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.25, day=0, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.25, day=0, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.25, day=3, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.25, day=3, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.25, day=3, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.25, day=6, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.25, day=6, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.25, day=6, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.25, day=9, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.25, day=9, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.25, day=9, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.25, day=10, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.25, day=10, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.25, day=10, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.25, day=11, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.25, day=11, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.25, day=11, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.4, day=0, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.4, day=0, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.4, day=0, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.4, day=3, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.4, day=3, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.4, day=3, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.4, day=6, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.4, day=6, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.4, day=6, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.4, day=9, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.4, day=9, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.4, day=9, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.4, day=10, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.4, day=10, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.4, day=10, S=140.0, avg=115.0</code></li>
+<li><code>K=80.0, vol=0.4, day=11, S=70.0, avg=90.0</code></li>
+<li><code>K=80.0, vol=0.4, day=11, S=100.0, avg=100.0</code></li>
+<li><code>K=80.0, vol=0.4, day=11, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.15, day=0, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.15, day=0, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.15, day=0, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.15, day=3, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.15, day=3, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.15, day=3, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.15, day=6, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.15, day=6, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.15, day=6, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.15, day=9, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.15, day=9, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.15, day=9, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.15, day=10, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.15, day=10, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.15, day=10, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.15, day=11, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.15, day=11, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.15, day=11, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.25, day=0, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.25, day=0, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.25, day=0, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.25, day=3, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.25, day=3, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.25, day=3, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.25, day=6, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.25, day=6, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.25, day=6, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.25, day=9, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.25, day=9, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.25, day=9, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.25, day=10, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.25, day=10, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.25, day=10, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.25, day=11, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.25, day=11, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.25, day=11, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.4, day=0, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.4, day=0, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.4, day=0, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.4, day=3, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.4, day=3, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.4, day=3, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.4, day=6, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.4, day=6, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.4, day=6, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.4, day=9, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.4, day=9, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.4, day=9, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.4, day=10, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.4, day=10, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.4, day=10, S=140.0, avg=115.0</code></li>
+<li><code>K=95.0, vol=0.4, day=11, S=70.0, avg=90.0</code></li>
+<li><code>K=95.0, vol=0.4, day=11, S=100.0, avg=100.0</code></li>
+<li><code>K=95.0, vol=0.4, day=11, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.15, day=0, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.15, day=0, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.15, day=0, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.15, day=3, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.15, day=3, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.15, day=3, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.15, day=6, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.15, day=6, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.15, day=6, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.15, day=9, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.15, day=9, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.15, day=9, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.15, day=10, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.15, day=10, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.15, day=10, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.15, day=11, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.15, day=11, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.15, day=11, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.25, day=0, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.25, day=0, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.25, day=0, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.25, day=3, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.25, day=3, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.25, day=3, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.25, day=6, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.25, day=6, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.25, day=6, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.25, day=9, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.25, day=9, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.25, day=9, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.25, day=10, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.25, day=10, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.25, day=10, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.25, day=11, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.25, day=11, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.25, day=11, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.4, day=0, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.4, day=0, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.4, day=0, S=140.0, avg=115.0</code></li>
+<li><code>K=110.0, vol=0.4, day=3, S=70.0, avg=90.0</code></li>
+<li><code>K=110.0, vol=0.4, day=3, S=100.0, avg=100.0</code></li>
+<li><code>K=110.0, vol=0.4, day=3, S=140.0, avg=115.0</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='autocallable-expanded'><h2>Autocallable</h2><ul><li><code>base, obs=0, S=45.0</code></li>
+<li><code>base, obs=0, S=70.0</code></li>
+<li><code>base, obs=0, S=90.0</code></li>
+<li><code>base, obs=0, S=105.0</code></li>
+<li><code>base, obs=0, S=140.0</code></li>
+<li><code>base, obs=1, S=45.0</code></li>
+<li><code>base, obs=1, S=70.0</code></li>
+<li><code>base, obs=1, S=90.0</code></li>
+<li><code>base, obs=1, S=105.0</code></li>
+<li><code>base, obs=1, S=140.0</code></li>
+<li><code>base, obs=2, S=45.0</code></li>
+<li><code>base, obs=2, S=70.0</code></li>
+<li><code>base, obs=2, S=90.0</code></li>
+<li><code>base, obs=2, S=105.0</code></li>
+<li><code>base, obs=2, S=140.0</code></li>
+<li><code>base, obs=3, S=45.0</code></li>
+<li><code>base, obs=3, S=70.0</code></li>
+<li><code>base, obs=3, S=90.0</code></li>
+<li><code>base, obs=3, S=105.0</code></li>
+<li><code>base, obs=3, S=140.0</code></li>
+<li><code>base, obs=4, S=45.0</code></li>
+<li><code>base, obs=4, S=70.0</code></li>
+<li><code>base, obs=4, S=90.0</code></li>
+<li><code>base, obs=4, S=105.0</code></li>
+<li><code>base, obs=4, S=140.0</code></li>
+<li><code>high_vol, obs=0, S=45.0</code></li>
+<li><code>high_vol, obs=0, S=70.0</code></li>
+<li><code>high_vol, obs=0, S=90.0</code></li>
+<li><code>high_vol, obs=0, S=105.0</code></li>
+<li><code>high_vol, obs=0, S=140.0</code></li>
+<li><code>high_vol, obs=1, S=45.0</code></li>
+<li><code>high_vol, obs=1, S=70.0</code></li>
+<li><code>high_vol, obs=1, S=90.0</code></li>
+<li><code>high_vol, obs=1, S=105.0</code></li>
+<li><code>high_vol, obs=1, S=140.0</code></li>
+<li><code>high_vol, obs=2, S=45.0</code></li>
+<li><code>high_vol, obs=2, S=70.0</code></li>
+<li><code>high_vol, obs=2, S=90.0</code></li>
+<li><code>high_vol, obs=2, S=105.0</code></li>
+<li><code>high_vol, obs=2, S=140.0</code></li>
+<li><code>high_vol, obs=3, S=45.0</code></li>
+<li><code>high_vol, obs=3, S=70.0</code></li>
+<li><code>high_vol, obs=3, S=90.0</code></li>
+<li><code>high_vol, obs=3, S=105.0</code></li>
+<li><code>high_vol, obs=3, S=140.0</code></li>
+<li><code>high_vol, obs=4, S=45.0</code></li>
+<li><code>high_vol, obs=4, S=70.0</code></li>
+<li><code>high_vol, obs=4, S=90.0</code></li>
+<li><code>high_vol, obs=4, S=105.0</code></li>
+<li><code>high_vol, obs=4, S=140.0</code></li>
+<li><code>low_autocall, obs=0, S=45.0</code></li>
+<li><code>low_autocall, obs=0, S=70.0</code></li>
+<li><code>low_autocall, obs=0, S=90.0</code></li>
+<li><code>low_autocall, obs=0, S=105.0</code></li>
+<li><code>low_autocall, obs=0, S=140.0</code></li>
+<li><code>low_autocall, obs=1, S=45.0</code></li>
+<li><code>low_autocall, obs=1, S=70.0</code></li>
+<li><code>low_autocall, obs=1, S=90.0</code></li>
+<li><code>low_autocall, obs=1, S=105.0</code></li>
+<li><code>low_autocall, obs=1, S=140.0</code></li>
+<li><code>low_autocall, obs=2, S=45.0</code></li>
+<li><code>low_autocall, obs=2, S=70.0</code></li>
+<li><code>low_autocall, obs=2, S=90.0</code></li>
+<li><code>low_autocall, obs=2, S=105.0</code></li>
+<li><code>low_autocall, obs=2, S=140.0</code></li>
+<li><code>low_autocall, obs=3, S=45.0</code></li>
+<li><code>low_autocall, obs=3, S=70.0</code></li>
+<li><code>low_autocall, obs=3, S=90.0</code></li>
+<li><code>low_autocall, obs=3, S=105.0</code></li>
+<li><code>low_autocall, obs=3, S=140.0</code></li>
+<li><code>low_autocall, obs=4, S=45.0</code></li>
+<li><code>low_autocall, obs=4, S=70.0</code></li>
+<li><code>low_autocall, obs=4, S=90.0</code></li>
+<li><code>low_autocall, obs=4, S=105.0</code></li>
+<li><code>low_autocall, obs=4, S=140.0</code></li>
+<li><code>high_coupon, obs=0, S=45.0</code></li>
+<li><code>high_coupon, obs=0, S=70.0</code></li>
+<li><code>high_coupon, obs=0, S=90.0</code></li>
+<li><code>high_coupon, obs=0, S=105.0</code></li>
+<li><code>high_coupon, obs=0, S=140.0</code></li>
+<li><code>high_coupon, obs=1, S=45.0</code></li>
+<li><code>high_coupon, obs=1, S=70.0</code></li>
+<li><code>high_coupon, obs=1, S=90.0</code></li>
+<li><code>high_coupon, obs=1, S=105.0</code></li>
+<li><code>high_coupon, obs=1, S=140.0</code></li>
+<li><code>high_coupon, obs=2, S=45.0</code></li>
+<li><code>high_coupon, obs=2, S=70.0</code></li>
+<li><code>high_coupon, obs=2, S=90.0</code></li>
+<li><code>high_coupon, obs=2, S=105.0</code></li>
+<li><code>high_coupon, obs=2, S=140.0</code></li>
+<li><code>high_coupon, obs=3, S=45.0</code></li>
+<li><code>high_coupon, obs=3, S=70.0</code></li>
+<li><code>high_coupon, obs=3, S=90.0</code></li>
+<li><code>high_coupon, obs=3, S=105.0</code></li>
+<li><code>high_coupon, obs=3, S=140.0</code></li>
+<li><code>high_coupon, obs=4, S=45.0</code></li>
+<li><code>high_coupon, obs=4, S=70.0</code></li>
+<li><code>high_coupon, obs=4, S=90.0</code></li>
+<li><code>high_coupon, obs=4, S=105.0</code></li>
+<li><code>high_coupon, obs=4, S=140.0</code></li>
+<li><code>downside_heavy, obs=0, S=45.0</code></li>
+<li><code>downside_heavy, obs=0, S=70.0</code></li>
+<li><code>downside_heavy, obs=0, S=90.0</code></li>
+<li><code>downside_heavy, obs=0, S=105.0</code></li>
+<li><code>downside_heavy, obs=0, S=140.0</code></li>
+<li><code>downside_heavy, obs=1, S=45.0</code></li>
+<li><code>downside_heavy, obs=1, S=70.0</code></li>
+<li><code>downside_heavy, obs=1, S=90.0</code></li>
+<li><code>downside_heavy, obs=1, S=105.0</code></li>
+<li><code>downside_heavy, obs=1, S=140.0</code></li>
+<li><code>downside_heavy, obs=2, S=45.0</code></li>
+<li><code>downside_heavy, obs=2, S=70.0</code></li>
+<li><code>downside_heavy, obs=2, S=90.0</code></li>
+<li><code>downside_heavy, obs=2, S=105.0</code></li>
+<li><code>downside_heavy, obs=2, S=140.0</code></li>
+<li><code>downside_heavy, obs=3, S=45.0</code></li>
+<li><code>downside_heavy, obs=3, S=70.0</code></li>
+<li><code>downside_heavy, obs=3, S=90.0</code></li>
+<li><code>downside_heavy, obs=3, S=105.0</code></li>
+<li><code>downside_heavy, obs=3, S=140.0</code></li>
+<li><code>downside_heavy, obs=4, S=45.0</code></li>
+<li><code>downside_heavy, obs=4, S=70.0</code></li>
+<li><code>downside_heavy, obs=4, S=90.0</code></li>
+<li><code>downside_heavy, obs=4, S=105.0</code></li>
+<li><code>downside_heavy, obs=4, S=140.0</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='barrier-expanded'><h2>Barrier</h2><p>Showing first 150 of 360 cases.</p><ul><li><code>down_out, month=0, vol=0.15, S=76.00</code></li>
+<li><code>down_out, month=0, vol=0.15, S=90.71</code></li>
+<li><code>down_out, month=0, vol=0.15, S=105.43</code></li>
+<li><code>down_out, month=0, vol=0.15, S=120.14</code></li>
+<li><code>down_out, month=0, vol=0.15, S=134.86</code></li>
+<li><code>down_out, month=0, vol=0.15, S=149.57</code></li>
+<li><code>down_out, month=0, vol=0.15, S=164.29</code></li>
+<li><code>down_out, month=0, vol=0.15, S=179.00</code></li>
+<li><code>down_out, month=0, vol=0.25, S=76.00</code></li>
+<li><code>down_out, month=0, vol=0.25, S=90.71</code></li>
+<li><code>down_out, month=0, vol=0.25, S=105.43</code></li>
+<li><code>down_out, month=0, vol=0.25, S=120.14</code></li>
+<li><code>down_out, month=0, vol=0.25, S=134.86</code></li>
+<li><code>down_out, month=0, vol=0.25, S=149.57</code></li>
+<li><code>down_out, month=0, vol=0.25, S=164.29</code></li>
+<li><code>down_out, month=0, vol=0.25, S=179.00</code></li>
+<li><code>down_out, month=0, vol=0.4, S=76.00</code></li>
+<li><code>down_out, month=0, vol=0.4, S=90.71</code></li>
+<li><code>down_out, month=0, vol=0.4, S=105.43</code></li>
+<li><code>down_out, month=0, vol=0.4, S=120.14</code></li>
+<li><code>down_out, month=0, vol=0.4, S=134.86</code></li>
+<li><code>down_out, month=0, vol=0.4, S=149.57</code></li>
+<li><code>down_out, month=0, vol=0.4, S=164.29</code></li>
+<li><code>down_out, month=0, vol=0.4, S=179.00</code></li>
+<li><code>down_out, month=3, vol=0.15, S=76.00</code></li>
+<li><code>down_out, month=3, vol=0.15, S=90.71</code></li>
+<li><code>down_out, month=3, vol=0.15, S=105.43</code></li>
+<li><code>down_out, month=3, vol=0.15, S=120.14</code></li>
+<li><code>down_out, month=3, vol=0.15, S=134.86</code></li>
+<li><code>down_out, month=3, vol=0.15, S=149.57</code></li>
+<li><code>down_out, month=3, vol=0.15, S=164.29</code></li>
+<li><code>down_out, month=3, vol=0.15, S=179.00</code></li>
+<li><code>down_out, month=3, vol=0.25, S=76.00</code></li>
+<li><code>down_out, month=3, vol=0.25, S=90.71</code></li>
+<li><code>down_out, month=3, vol=0.25, S=105.43</code></li>
+<li><code>down_out, month=3, vol=0.25, S=120.14</code></li>
+<li><code>down_out, month=3, vol=0.25, S=134.86</code></li>
+<li><code>down_out, month=3, vol=0.25, S=149.57</code></li>
+<li><code>down_out, month=3, vol=0.25, S=164.29</code></li>
+<li><code>down_out, month=3, vol=0.25, S=179.00</code></li>
+<li><code>down_out, month=3, vol=0.4, S=76.00</code></li>
+<li><code>down_out, month=3, vol=0.4, S=90.71</code></li>
+<li><code>down_out, month=3, vol=0.4, S=105.43</code></li>
+<li><code>down_out, month=3, vol=0.4, S=120.14</code></li>
+<li><code>down_out, month=3, vol=0.4, S=134.86</code></li>
+<li><code>down_out, month=3, vol=0.4, S=149.57</code></li>
+<li><code>down_out, month=3, vol=0.4, S=164.29</code></li>
+<li><code>down_out, month=3, vol=0.4, S=179.00</code></li>
+<li><code>down_out, month=6, vol=0.15, S=76.00</code></li>
+<li><code>down_out, month=6, vol=0.15, S=90.71</code></li>
+<li><code>down_out, month=6, vol=0.15, S=105.43</code></li>
+<li><code>down_out, month=6, vol=0.15, S=120.14</code></li>
+<li><code>down_out, month=6, vol=0.15, S=134.86</code></li>
+<li><code>down_out, month=6, vol=0.15, S=149.57</code></li>
+<li><code>down_out, month=6, vol=0.15, S=164.29</code></li>
+<li><code>down_out, month=6, vol=0.15, S=179.00</code></li>
+<li><code>down_out, month=6, vol=0.25, S=76.00</code></li>
+<li><code>down_out, month=6, vol=0.25, S=90.71</code></li>
+<li><code>down_out, month=6, vol=0.25, S=105.43</code></li>
+<li><code>down_out, month=6, vol=0.25, S=120.14</code></li>
+<li><code>down_out, month=6, vol=0.25, S=134.86</code></li>
+<li><code>down_out, month=6, vol=0.25, S=149.57</code></li>
+<li><code>down_out, month=6, vol=0.25, S=164.29</code></li>
+<li><code>down_out, month=6, vol=0.25, S=179.00</code></li>
+<li><code>down_out, month=6, vol=0.4, S=76.00</code></li>
+<li><code>down_out, month=6, vol=0.4, S=90.71</code></li>
+<li><code>down_out, month=6, vol=0.4, S=105.43</code></li>
+<li><code>down_out, month=6, vol=0.4, S=120.14</code></li>
+<li><code>down_out, month=6, vol=0.4, S=134.86</code></li>
+<li><code>down_out, month=6, vol=0.4, S=149.57</code></li>
+<li><code>down_out, month=6, vol=0.4, S=164.29</code></li>
+<li><code>down_out, month=6, vol=0.4, S=179.00</code></li>
+<li><code>down_out, month=9, vol=0.15, S=76.00</code></li>
+<li><code>down_out, month=9, vol=0.15, S=90.71</code></li>
+<li><code>down_out, month=9, vol=0.15, S=105.43</code></li>
+<li><code>down_out, month=9, vol=0.15, S=120.14</code></li>
+<li><code>down_out, month=9, vol=0.15, S=134.86</code></li>
+<li><code>down_out, month=9, vol=0.15, S=149.57</code></li>
+<li><code>down_out, month=9, vol=0.15, S=164.29</code></li>
+<li><code>down_out, month=9, vol=0.15, S=179.00</code></li>
+<li><code>down_out, month=9, vol=0.25, S=76.00</code></li>
+<li><code>down_out, month=9, vol=0.25, S=90.71</code></li>
+<li><code>down_out, month=9, vol=0.25, S=105.43</code></li>
+<li><code>down_out, month=9, vol=0.25, S=120.14</code></li>
+<li><code>down_out, month=9, vol=0.25, S=134.86</code></li>
+<li><code>down_out, month=9, vol=0.25, S=149.57</code></li>
+<li><code>down_out, month=9, vol=0.25, S=164.29</code></li>
+<li><code>down_out, month=9, vol=0.25, S=179.00</code></li>
+<li><code>down_out, month=9, vol=0.4, S=76.00</code></li>
+<li><code>down_out, month=9, vol=0.4, S=90.71</code></li>
+<li><code>down_out, month=9, vol=0.4, S=105.43</code></li>
+<li><code>down_out, month=9, vol=0.4, S=120.14</code></li>
+<li><code>down_out, month=9, vol=0.4, S=134.86</code></li>
+<li><code>down_out, month=9, vol=0.4, S=149.57</code></li>
+<li><code>down_out, month=9, vol=0.4, S=164.29</code></li>
+<li><code>down_out, month=9, vol=0.4, S=179.00</code></li>
+<li><code>down_out, month=12, vol=0.15, S=76.00</code></li>
+<li><code>down_out, month=12, vol=0.15, S=90.71</code></li>
+<li><code>down_out, month=12, vol=0.15, S=105.43</code></li>
+<li><code>down_out, month=12, vol=0.15, S=120.14</code></li>
+<li><code>down_out, month=12, vol=0.15, S=134.86</code></li>
+<li><code>down_out, month=12, vol=0.15, S=149.57</code></li>
+<li><code>down_out, month=12, vol=0.15, S=164.29</code></li>
+<li><code>down_out, month=12, vol=0.15, S=179.00</code></li>
+<li><code>down_out, month=12, vol=0.25, S=76.00</code></li>
+<li><code>down_out, month=12, vol=0.25, S=90.71</code></li>
+<li><code>down_out, month=12, vol=0.25, S=105.43</code></li>
+<li><code>down_out, month=12, vol=0.25, S=120.14</code></li>
+<li><code>down_out, month=12, vol=0.25, S=134.86</code></li>
+<li><code>down_out, month=12, vol=0.25, S=149.57</code></li>
+<li><code>down_out, month=12, vol=0.25, S=164.29</code></li>
+<li><code>down_out, month=12, vol=0.25, S=179.00</code></li>
+<li><code>down_out, month=12, vol=0.4, S=76.00</code></li>
+<li><code>down_out, month=12, vol=0.4, S=90.71</code></li>
+<li><code>down_out, month=12, vol=0.4, S=105.43</code></li>
+<li><code>down_out, month=12, vol=0.4, S=120.14</code></li>
+<li><code>down_out, month=12, vol=0.4, S=134.86</code></li>
+<li><code>down_out, month=12, vol=0.4, S=149.57</code></li>
+<li><code>down_out, month=12, vol=0.4, S=164.29</code></li>
+<li><code>down_out, month=12, vol=0.4, S=179.00</code></li>
+<li><code>up_out, month=0, vol=0.15, S=46.00</code></li>
+<li><code>up_out, month=0, vol=0.15, S=58.57</code></li>
+<li><code>up_out, month=0, vol=0.15, S=71.14</code></li>
+<li><code>up_out, month=0, vol=0.15, S=83.71</code></li>
+<li><code>up_out, month=0, vol=0.15, S=96.29</code></li>
+<li><code>up_out, month=0, vol=0.15, S=108.86</code></li>
+<li><code>up_out, month=0, vol=0.15, S=121.43</code></li>
+<li><code>up_out, month=0, vol=0.15, S=134.00</code></li>
+<li><code>up_out, month=0, vol=0.25, S=46.00</code></li>
+<li><code>up_out, month=0, vol=0.25, S=58.57</code></li>
+<li><code>up_out, month=0, vol=0.25, S=71.14</code></li>
+<li><code>up_out, month=0, vol=0.25, S=83.71</code></li>
+<li><code>up_out, month=0, vol=0.25, S=96.29</code></li>
+<li><code>up_out, month=0, vol=0.25, S=108.86</code></li>
+<li><code>up_out, month=0, vol=0.25, S=121.43</code></li>
+<li><code>up_out, month=0, vol=0.25, S=134.00</code></li>
+<li><code>up_out, month=0, vol=0.4, S=46.00</code></li>
+<li><code>up_out, month=0, vol=0.4, S=58.57</code></li>
+<li><code>up_out, month=0, vol=0.4, S=71.14</code></li>
+<li><code>up_out, month=0, vol=0.4, S=83.71</code></li>
+<li><code>up_out, month=0, vol=0.4, S=96.29</code></li>
+<li><code>up_out, month=0, vol=0.4, S=108.86</code></li>
+<li><code>up_out, month=0, vol=0.4, S=121.43</code></li>
+<li><code>up_out, month=0, vol=0.4, S=134.00</code></li>
+<li><code>up_out, month=3, vol=0.15, S=46.00</code></li>
+<li><code>up_out, month=3, vol=0.15, S=58.57</code></li>
+<li><code>up_out, month=3, vol=0.15, S=71.14</code></li>
+<li><code>up_out, month=3, vol=0.15, S=83.71</code></li>
+<li><code>up_out, month=3, vol=0.15, S=96.29</code></li>
+<li><code>up_out, month=3, vol=0.15, S=108.86</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='basket-asian-expanded'><h2>Basket Asian</h2><ul><li><code>day=0, scale=0.7, avg=80.0</code></li>
+<li><code>day=0, scale=0.7, avg=95.0</code></li>
+<li><code>day=0, scale=0.7, avg=105.0</code></li>
+<li><code>day=0, scale=0.7, avg=120.0</code></li>
+<li><code>day=0, scale=0.7, avg=140.0</code></li>
+<li><code>day=0, scale=0.9, avg=80.0</code></li>
+<li><code>day=0, scale=0.9, avg=95.0</code></li>
+<li><code>day=0, scale=0.9, avg=105.0</code></li>
+<li><code>day=0, scale=0.9, avg=120.0</code></li>
+<li><code>day=0, scale=0.9, avg=140.0</code></li>
+<li><code>day=0, scale=1.1, avg=80.0</code></li>
+<li><code>day=0, scale=1.1, avg=95.0</code></li>
+<li><code>day=0, scale=1.1, avg=105.0</code></li>
+<li><code>day=0, scale=1.1, avg=120.0</code></li>
+<li><code>day=0, scale=1.1, avg=140.0</code></li>
+<li><code>day=0, scale=1.35, avg=80.0</code></li>
+<li><code>day=0, scale=1.35, avg=95.0</code></li>
+<li><code>day=0, scale=1.35, avg=105.0</code></li>
+<li><code>day=0, scale=1.35, avg=120.0</code></li>
+<li><code>day=0, scale=1.35, avg=140.0</code></li>
+<li><code>day=3, scale=0.7, avg=80.0</code></li>
+<li><code>day=3, scale=0.7, avg=95.0</code></li>
+<li><code>day=3, scale=0.7, avg=105.0</code></li>
+<li><code>day=3, scale=0.7, avg=120.0</code></li>
+<li><code>day=3, scale=0.7, avg=140.0</code></li>
+<li><code>day=3, scale=0.9, avg=80.0</code></li>
+<li><code>day=3, scale=0.9, avg=95.0</code></li>
+<li><code>day=3, scale=0.9, avg=105.0</code></li>
+<li><code>day=3, scale=0.9, avg=120.0</code></li>
+<li><code>day=3, scale=0.9, avg=140.0</code></li>
+<li><code>day=3, scale=1.1, avg=80.0</code></li>
+<li><code>day=3, scale=1.1, avg=95.0</code></li>
+<li><code>day=3, scale=1.1, avg=105.0</code></li>
+<li><code>day=3, scale=1.1, avg=120.0</code></li>
+<li><code>day=3, scale=1.1, avg=140.0</code></li>
+<li><code>day=3, scale=1.35, avg=80.0</code></li>
+<li><code>day=3, scale=1.35, avg=95.0</code></li>
+<li><code>day=3, scale=1.35, avg=105.0</code></li>
+<li><code>day=3, scale=1.35, avg=120.0</code></li>
+<li><code>day=3, scale=1.35, avg=140.0</code></li>
+<li><code>day=6, scale=0.7, avg=80.0</code></li>
+<li><code>day=6, scale=0.7, avg=95.0</code></li>
+<li><code>day=6, scale=0.7, avg=105.0</code></li>
+<li><code>day=6, scale=0.7, avg=120.0</code></li>
+<li><code>day=6, scale=0.7, avg=140.0</code></li>
+<li><code>day=6, scale=0.9, avg=80.0</code></li>
+<li><code>day=6, scale=0.9, avg=95.0</code></li>
+<li><code>day=6, scale=0.9, avg=105.0</code></li>
+<li><code>day=6, scale=0.9, avg=120.0</code></li>
+<li><code>day=6, scale=0.9, avg=140.0</code></li>
+<li><code>day=6, scale=1.1, avg=80.0</code></li>
+<li><code>day=6, scale=1.1, avg=95.0</code></li>
+<li><code>day=6, scale=1.1, avg=105.0</code></li>
+<li><code>day=6, scale=1.1, avg=120.0</code></li>
+<li><code>day=6, scale=1.1, avg=140.0</code></li>
+<li><code>day=6, scale=1.35, avg=80.0</code></li>
+<li><code>day=6, scale=1.35, avg=95.0</code></li>
+<li><code>day=6, scale=1.35, avg=105.0</code></li>
+<li><code>day=6, scale=1.35, avg=120.0</code></li>
+<li><code>day=6, scale=1.35, avg=140.0</code></li>
+<li><code>day=9, scale=0.7, avg=80.0</code></li>
+<li><code>day=9, scale=0.7, avg=95.0</code></li>
+<li><code>day=9, scale=0.7, avg=105.0</code></li>
+<li><code>day=9, scale=0.7, avg=120.0</code></li>
+<li><code>day=9, scale=0.7, avg=140.0</code></li>
+<li><code>day=9, scale=0.9, avg=80.0</code></li>
+<li><code>day=9, scale=0.9, avg=95.0</code></li>
+<li><code>day=9, scale=0.9, avg=105.0</code></li>
+<li><code>day=9, scale=0.9, avg=120.0</code></li>
+<li><code>day=9, scale=0.9, avg=140.0</code></li>
+<li><code>day=9, scale=1.1, avg=80.0</code></li>
+<li><code>day=9, scale=1.1, avg=95.0</code></li>
+<li><code>day=9, scale=1.1, avg=105.0</code></li>
+<li><code>day=9, scale=1.1, avg=120.0</code></li>
+<li><code>day=9, scale=1.1, avg=140.0</code></li>
+<li><code>day=9, scale=1.35, avg=80.0</code></li>
+<li><code>day=9, scale=1.35, avg=95.0</code></li>
+<li><code>day=9, scale=1.35, avg=105.0</code></li>
+<li><code>day=9, scale=1.35, avg=120.0</code></li>
+<li><code>day=9, scale=1.35, avg=140.0</code></li>
+<li><code>day=10, scale=0.7, avg=80.0</code></li>
+<li><code>day=10, scale=0.7, avg=95.0</code></li>
+<li><code>day=10, scale=0.7, avg=105.0</code></li>
+<li><code>day=10, scale=0.7, avg=120.0</code></li>
+<li><code>day=10, scale=0.7, avg=140.0</code></li>
+<li><code>day=10, scale=0.9, avg=80.0</code></li>
+<li><code>day=10, scale=0.9, avg=95.0</code></li>
+<li><code>day=10, scale=0.9, avg=105.0</code></li>
+<li><code>day=10, scale=0.9, avg=120.0</code></li>
+<li><code>day=10, scale=0.9, avg=140.0</code></li>
+<li><code>day=10, scale=1.1, avg=80.0</code></li>
+<li><code>day=10, scale=1.1, avg=95.0</code></li>
+<li><code>day=10, scale=1.1, avg=105.0</code></li>
+<li><code>day=10, scale=1.1, avg=120.0</code></li>
+<li><code>day=10, scale=1.1, avg=140.0</code></li>
+<li><code>day=10, scale=1.35, avg=80.0</code></li>
+<li><code>day=10, scale=1.35, avg=95.0</code></li>
+<li><code>day=10, scale=1.35, avg=105.0</code></li>
+<li><code>day=10, scale=1.35, avg=120.0</code></li>
+<li><code>day=10, scale=1.35, avg=140.0</code></li>
+<li><code>day=11, scale=0.7, avg=80.0</code></li>
+<li><code>day=11, scale=0.7, avg=95.0</code></li>
+<li><code>day=11, scale=0.7, avg=105.0</code></li>
+<li><code>day=11, scale=0.7, avg=120.0</code></li>
+<li><code>day=11, scale=0.7, avg=140.0</code></li>
+<li><code>day=11, scale=0.9, avg=80.0</code></li>
+<li><code>day=11, scale=0.9, avg=95.0</code></li>
+<li><code>day=11, scale=0.9, avg=105.0</code></li>
+<li><code>day=11, scale=0.9, avg=120.0</code></li>
+<li><code>day=11, scale=0.9, avg=140.0</code></li>
+<li><code>day=11, scale=1.1, avg=80.0</code></li>
+<li><code>day=11, scale=1.1, avg=95.0</code></li>
+<li><code>day=11, scale=1.1, avg=105.0</code></li>
+<li><code>day=11, scale=1.1, avg=120.0</code></li>
+<li><code>day=11, scale=1.1, avg=140.0</code></li>
+<li><code>day=11, scale=1.35, avg=80.0</code></li>
+<li><code>day=11, scale=1.35, avg=95.0</code></li>
+<li><code>day=11, scale=1.35, avg=105.0</code></li>
+<li><code>day=11, scale=1.35, avg=120.0</code></li>
+<li><code>day=11, scale=1.35, avg=140.0</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='basket-cliquet-expanded'><h2>Basket cliquet</h2><ul><li><code>basket_return, month=0, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_return, month=0, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_return, month=0, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>basket_return, month=3, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_return, month=3, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_return, month=3, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>basket_return, month=6, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_return, month=6, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_return, month=6, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>basket_return, month=9, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_return, month=9, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_return, month=9, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>basket_return, month=12, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_return, month=12, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_return, month=12, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>weighted_average, month=0, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>weighted_average, month=0, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>weighted_average, month=0, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>weighted_average, month=3, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>weighted_average, month=3, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>weighted_average, month=3, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>weighted_average, month=6, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>weighted_average, month=6, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>weighted_average, month=6, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>weighted_average, month=9, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>weighted_average, month=9, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>weighted_average, month=9, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>weighted_average, month=12, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>weighted_average, month=12, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>weighted_average, month=12, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>basket_ratio, month=0, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_ratio, month=0, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_ratio, month=0, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>basket_ratio, month=3, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_ratio, month=3, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_ratio, month=3, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>basket_ratio, month=6, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_ratio, month=6, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_ratio, month=6, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>basket_ratio, month=9, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_ratio, month=9, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_ratio, month=9, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>basket_ratio, month=12, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>basket_ratio, month=12, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>basket_ratio, month=12, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>average_clipped, month=0, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>average_clipped, month=0, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>average_clipped, month=0, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>average_clipped, month=3, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>average_clipped, month=3, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>average_clipped, month=3, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>average_clipped, month=6, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>average_clipped, month=6, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>average_clipped, month=6, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>average_clipped, month=9, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>average_clipped, month=9, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>average_clipped, month=9, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>average_clipped, month=12, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>average_clipped, month=12, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>average_clipped, month=12, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>second_worst, month=0, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>second_worst, month=0, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>second_worst, month=0, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>second_worst, month=3, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>second_worst, month=3, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>second_worst, month=3, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>second_worst, month=6, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>second_worst, month=6, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>second_worst, month=6, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>second_worst, month=9, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>second_worst, month=9, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>second_worst, month=9, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>second_worst, month=12, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>second_worst, month=12, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>second_worst, month=12, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>worst_of, month=0, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>worst_of, month=0, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>worst_of, month=0, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>worst_of, month=3, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>worst_of, month=3, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>worst_of, month=3, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>worst_of, month=6, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>worst_of, month=6, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>worst_of, month=6, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>worst_of, month=9, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>worst_of, month=9, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>worst_of, month=9, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>worst_of, month=12, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>worst_of, month=12, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>worst_of, month=12, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>best_of, month=0, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>best_of, month=0, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>best_of, month=0, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>best_of, month=3, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>best_of, month=3, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>best_of, month=3, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>best_of, month=6, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>best_of, month=6, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>best_of, month=6, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>best_of, month=9, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>best_of, month=9, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>best_of, month=9, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>best_of, month=12, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>best_of, month=12, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>best_of, month=12, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>spread_bonus, month=0, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>spread_bonus, month=0, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>spread_bonus, month=0, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>spread_bonus, month=3, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>spread_bonus, month=3, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>spread_bonus, month=3, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>spread_bonus, month=6, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>spread_bonus, month=6, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>spread_bonus, month=6, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>spread_bonus, month=9, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>spread_bonus, month=9, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>spread_bonus, month=9, returns=[[0.0, 0.02, 0.03]]</code></li>
+<li><code>spread_bonus, month=12, returns=[[0.1, -0.04, 0.01]]</code></li>
+<li><code>spread_bonus, month=12, returns=[[-0.08, -0.02, 0.05]]</code></li>
+<li><code>spread_bonus, month=12, returns=[[0.0, 0.02, 0.03]]</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='bermudan-expanded'><h2>Bermudan</h2><ul><li><code>K=80.0, vol=0.15, ex=0, S=60.0</code></li>
+<li><code>K=80.0, vol=0.15, ex=0, S=100.0</code></li>
+<li><code>K=80.0, vol=0.15, ex=0, S=160.0</code></li>
+<li><code>K=80.0, vol=0.15, ex=4, S=60.0</code></li>
+<li><code>K=80.0, vol=0.15, ex=4, S=100.0</code></li>
+<li><code>K=80.0, vol=0.15, ex=4, S=160.0</code></li>
+<li><code>K=80.0, vol=0.15, ex=8, S=60.0</code></li>
+<li><code>K=80.0, vol=0.15, ex=8, S=100.0</code></li>
+<li><code>K=80.0, vol=0.15, ex=8, S=160.0</code></li>
+<li><code>K=80.0, vol=0.25, ex=0, S=60.0</code></li>
+<li><code>K=80.0, vol=0.25, ex=0, S=100.0</code></li>
+<li><code>K=80.0, vol=0.25, ex=0, S=160.0</code></li>
+<li><code>K=80.0, vol=0.25, ex=4, S=60.0</code></li>
+<li><code>K=80.0, vol=0.25, ex=4, S=100.0</code></li>
+<li><code>K=80.0, vol=0.25, ex=4, S=160.0</code></li>
+<li><code>K=80.0, vol=0.25, ex=8, S=60.0</code></li>
+<li><code>K=80.0, vol=0.25, ex=8, S=100.0</code></li>
+<li><code>K=80.0, vol=0.25, ex=8, S=160.0</code></li>
+<li><code>K=80.0, vol=0.4, ex=0, S=60.0</code></li>
+<li><code>K=80.0, vol=0.4, ex=0, S=100.0</code></li>
+<li><code>K=80.0, vol=0.4, ex=0, S=160.0</code></li>
+<li><code>K=80.0, vol=0.4, ex=4, S=60.0</code></li>
+<li><code>K=80.0, vol=0.4, ex=4, S=100.0</code></li>
+<li><code>K=80.0, vol=0.4, ex=4, S=160.0</code></li>
+<li><code>K=80.0, vol=0.4, ex=8, S=60.0</code></li>
+<li><code>K=80.0, vol=0.4, ex=8, S=100.0</code></li>
+<li><code>K=80.0, vol=0.4, ex=8, S=160.0</code></li>
+<li><code>K=100.0, vol=0.15, ex=0, S=60.0</code></li>
+<li><code>K=100.0, vol=0.15, ex=0, S=100.0</code></li>
+<li><code>K=100.0, vol=0.15, ex=0, S=160.0</code></li>
+<li><code>K=100.0, vol=0.15, ex=4, S=60.0</code></li>
+<li><code>K=100.0, vol=0.15, ex=4, S=100.0</code></li>
+<li><code>K=100.0, vol=0.15, ex=4, S=160.0</code></li>
+<li><code>K=100.0, vol=0.15, ex=8, S=60.0</code></li>
+<li><code>K=100.0, vol=0.15, ex=8, S=100.0</code></li>
+<li><code>K=100.0, vol=0.15, ex=8, S=160.0</code></li>
+<li><code>K=100.0, vol=0.25, ex=0, S=60.0</code></li>
+<li><code>K=100.0, vol=0.25, ex=0, S=100.0</code></li>
+<li><code>K=100.0, vol=0.25, ex=0, S=160.0</code></li>
+<li><code>K=100.0, vol=0.25, ex=4, S=60.0</code></li>
+<li><code>K=100.0, vol=0.25, ex=4, S=100.0</code></li>
+<li><code>K=100.0, vol=0.25, ex=4, S=160.0</code></li>
+<li><code>K=100.0, vol=0.25, ex=8, S=60.0</code></li>
+<li><code>K=100.0, vol=0.25, ex=8, S=100.0</code></li>
+<li><code>K=100.0, vol=0.25, ex=8, S=160.0</code></li>
+<li><code>K=100.0, vol=0.4, ex=0, S=60.0</code></li>
+<li><code>K=100.0, vol=0.4, ex=0, S=100.0</code></li>
+<li><code>K=100.0, vol=0.4, ex=0, S=160.0</code></li>
+<li><code>K=100.0, vol=0.4, ex=4, S=60.0</code></li>
+<li><code>K=100.0, vol=0.4, ex=4, S=100.0</code></li>
+<li><code>K=100.0, vol=0.4, ex=4, S=160.0</code></li>
+<li><code>K=100.0, vol=0.4, ex=8, S=60.0</code></li>
+<li><code>K=100.0, vol=0.4, ex=8, S=100.0</code></li>
+<li><code>K=100.0, vol=0.4, ex=8, S=160.0</code></li>
+<li><code>K=120.0, vol=0.15, ex=0, S=60.0</code></li>
+<li><code>K=120.0, vol=0.15, ex=0, S=100.0</code></li>
+<li><code>K=120.0, vol=0.15, ex=0, S=160.0</code></li>
+<li><code>K=120.0, vol=0.15, ex=4, S=60.0</code></li>
+<li><code>K=120.0, vol=0.15, ex=4, S=100.0</code></li>
+<li><code>K=120.0, vol=0.15, ex=4, S=160.0</code></li>
+<li><code>K=120.0, vol=0.15, ex=8, S=60.0</code></li>
+<li><code>K=120.0, vol=0.15, ex=8, S=100.0</code></li>
+<li><code>K=120.0, vol=0.15, ex=8, S=160.0</code></li>
+<li><code>K=120.0, vol=0.25, ex=0, S=60.0</code></li>
+<li><code>K=120.0, vol=0.25, ex=0, S=100.0</code></li>
+<li><code>K=120.0, vol=0.25, ex=0, S=160.0</code></li>
+<li><code>K=120.0, vol=0.25, ex=4, S=60.0</code></li>
+<li><code>K=120.0, vol=0.25, ex=4, S=100.0</code></li>
+<li><code>K=120.0, vol=0.25, ex=4, S=160.0</code></li>
+<li><code>K=120.0, vol=0.25, ex=8, S=60.0</code></li>
+<li><code>K=120.0, vol=0.25, ex=8, S=100.0</code></li>
+<li><code>K=120.0, vol=0.25, ex=8, S=160.0</code></li>
+<li><code>K=120.0, vol=0.4, ex=0, S=60.0</code></li>
+<li><code>K=120.0, vol=0.4, ex=0, S=100.0</code></li>
+<li><code>K=120.0, vol=0.4, ex=0, S=160.0</code></li>
+<li><code>K=120.0, vol=0.4, ex=4, S=60.0</code></li>
+<li><code>K=120.0, vol=0.4, ex=4, S=100.0</code></li>
+<li><code>K=120.0, vol=0.4, ex=4, S=160.0</code></li>
+<li><code>K=120.0, vol=0.4, ex=8, S=60.0</code></li>
+<li><code>K=120.0, vol=0.4, ex=8, S=100.0</code></li>
+<li><code>K=120.0, vol=0.4, ex=8, S=160.0</code></li>
+<li><code>K=140.0, vol=0.15, ex=0, S=60.0</code></li>
+<li><code>K=140.0, vol=0.15, ex=0, S=100.0</code></li>
+<li><code>K=140.0, vol=0.15, ex=0, S=160.0</code></li>
+<li><code>K=140.0, vol=0.15, ex=4, S=60.0</code></li>
+<li><code>K=140.0, vol=0.15, ex=4, S=100.0</code></li>
+<li><code>K=140.0, vol=0.15, ex=4, S=160.0</code></li>
+<li><code>K=140.0, vol=0.15, ex=8, S=60.0</code></li>
+<li><code>K=140.0, vol=0.15, ex=8, S=100.0</code></li>
+<li><code>K=140.0, vol=0.15, ex=8, S=160.0</code></li>
+<li><code>K=140.0, vol=0.25, ex=0, S=60.0</code></li>
+<li><code>K=140.0, vol=0.25, ex=0, S=100.0</code></li>
+<li><code>K=140.0, vol=0.25, ex=0, S=160.0</code></li>
+<li><code>K=140.0, vol=0.25, ex=4, S=60.0</code></li>
+<li><code>K=140.0, vol=0.25, ex=4, S=100.0</code></li>
+<li><code>K=140.0, vol=0.25, ex=4, S=160.0</code></li>
+<li><code>K=140.0, vol=0.25, ex=8, S=60.0</code></li>
+<li><code>K=140.0, vol=0.25, ex=8, S=100.0</code></li>
+<li><code>K=140.0, vol=0.25, ex=8, S=160.0</code></li>
+<li><code>K=140.0, vol=0.4, ex=0, S=60.0</code></li>
+<li><code>K=140.0, vol=0.4, ex=0, S=100.0</code></li>
+<li><code>K=140.0, vol=0.4, ex=0, S=160.0</code></li>
+<li><code>K=140.0, vol=0.4, ex=4, S=60.0</code></li>
+<li><code>K=140.0, vol=0.4, ex=4, S=100.0</code></li>
+<li><code>K=140.0, vol=0.4, ex=4, S=160.0</code></li>
+<li><code>K=140.0, vol=0.4, ex=8, S=60.0</code></li>
+<li><code>K=140.0, vol=0.4, ex=8, S=100.0</code></li>
+<li><code>K=140.0, vol=0.4, ex=8, S=160.0</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='cliquet-expanded'><h2>Cliquet</h2><ul><li><code>cap=0.03, day=0, accrued=-0.0500</code></li>
+<li><code>cap=0.03, day=0, accrued=-0.0357</code></li>
+<li><code>cap=0.03, day=0, accrued=-0.0214</code></li>
+<li><code>cap=0.03, day=0, accrued=-0.0071</code></li>
+<li><code>cap=0.03, day=0, accrued=0.0071</code></li>
+<li><code>cap=0.03, day=0, accrued=0.0214</code></li>
+<li><code>cap=0.03, day=0, accrued=0.0357</code></li>
+<li><code>cap=0.03, day=0, accrued=0.0500</code></li>
+<li><code>cap=0.03, day=3, accrued=-0.1100</code></li>
+<li><code>cap=0.03, day=3, accrued=-0.0743</code></li>
+<li><code>cap=0.03, day=3, accrued=-0.0386</code></li>
+<li><code>cap=0.03, day=3, accrued=-0.0029</code></li>
+<li><code>cap=0.03, day=3, accrued=0.0329</code></li>
+<li><code>cap=0.03, day=3, accrued=0.0686</code></li>
+<li><code>cap=0.03, day=3, accrued=0.1043</code></li>
+<li><code>cap=0.03, day=3, accrued=0.1400</code></li>
+<li><code>cap=0.03, day=6, accrued=-0.1700</code></li>
+<li><code>cap=0.03, day=6, accrued=-0.1129</code></li>
+<li><code>cap=0.03, day=6, accrued=-0.0557</code></li>
+<li><code>cap=0.03, day=6, accrued=0.0014</code></li>
+<li><code>cap=0.03, day=6, accrued=0.0586</code></li>
+<li><code>cap=0.03, day=6, accrued=0.1157</code></li>
+<li><code>cap=0.03, day=6, accrued=0.1729</code></li>
+<li><code>cap=0.03, day=6, accrued=0.2300</code></li>
+<li><code>cap=0.03, day=9, accrued=-0.2300</code></li>
+<li><code>cap=0.03, day=9, accrued=-0.1514</code></li>
+<li><code>cap=0.03, day=9, accrued=-0.0729</code></li>
+<li><code>cap=0.03, day=9, accrued=0.0057</code></li>
+<li><code>cap=0.03, day=9, accrued=0.0843</code></li>
+<li><code>cap=0.03, day=9, accrued=0.1629</code></li>
+<li><code>cap=0.03, day=9, accrued=0.2414</code></li>
+<li><code>cap=0.03, day=9, accrued=0.3200</code></li>
+<li><code>cap=0.03, day=12, accrued=-0.2900</code></li>
+<li><code>cap=0.03, day=12, accrued=-0.1900</code></li>
+<li><code>cap=0.03, day=12, accrued=-0.0900</code></li>
+<li><code>cap=0.03, day=12, accrued=0.0100</code></li>
+<li><code>cap=0.03, day=12, accrued=0.1100</code></li>
+<li><code>cap=0.03, day=12, accrued=0.2100</code></li>
+<li><code>cap=0.03, day=12, accrued=0.3100</code></li>
+<li><code>cap=0.03, day=12, accrued=0.4100</code></li>
+<li><code>cap=0.04, day=0, accrued=-0.0500</code></li>
+<li><code>cap=0.04, day=0, accrued=-0.0357</code></li>
+<li><code>cap=0.04, day=0, accrued=-0.0214</code></li>
+<li><code>cap=0.04, day=0, accrued=-0.0071</code></li>
+<li><code>cap=0.04, day=0, accrued=0.0071</code></li>
+<li><code>cap=0.04, day=0, accrued=0.0214</code></li>
+<li><code>cap=0.04, day=0, accrued=0.0357</code></li>
+<li><code>cap=0.04, day=0, accrued=0.0500</code></li>
+<li><code>cap=0.04, day=3, accrued=-0.1100</code></li>
+<li><code>cap=0.04, day=3, accrued=-0.0700</code></li>
+<li><code>cap=0.04, day=3, accrued=-0.0300</code></li>
+<li><code>cap=0.04, day=3, accrued=0.0100</code></li>
+<li><code>cap=0.04, day=3, accrued=0.0500</code></li>
+<li><code>cap=0.04, day=3, accrued=0.0900</code></li>
+<li><code>cap=0.04, day=3, accrued=0.1300</code></li>
+<li><code>cap=0.04, day=3, accrued=0.1700</code></li>
+<li><code>cap=0.04, day=6, accrued=-0.1700</code></li>
+<li><code>cap=0.04, day=6, accrued=-0.1043</code></li>
+<li><code>cap=0.04, day=6, accrued=-0.0386</code></li>
+<li><code>cap=0.04, day=6, accrued=0.0271</code></li>
+<li><code>cap=0.04, day=6, accrued=0.0929</code></li>
+<li><code>cap=0.04, day=6, accrued=0.1586</code></li>
+<li><code>cap=0.04, day=6, accrued=0.2243</code></li>
+<li><code>cap=0.04, day=6, accrued=0.2900</code></li>
+<li><code>cap=0.04, day=9, accrued=-0.2300</code></li>
+<li><code>cap=0.04, day=9, accrued=-0.1386</code></li>
+<li><code>cap=0.04, day=9, accrued=-0.0471</code></li>
+<li><code>cap=0.04, day=9, accrued=0.0443</code></li>
+<li><code>cap=0.04, day=9, accrued=0.1357</code></li>
+<li><code>cap=0.04, day=9, accrued=0.2271</code></li>
+<li><code>cap=0.04, day=9, accrued=0.3186</code></li>
+<li><code>cap=0.04, day=9, accrued=0.4100</code></li>
+<li><code>cap=0.04, day=12, accrued=-0.2900</code></li>
+<li><code>cap=0.04, day=12, accrued=-0.1729</code></li>
+<li><code>cap=0.04, day=12, accrued=-0.0557</code></li>
+<li><code>cap=0.04, day=12, accrued=0.0614</code></li>
+<li><code>cap=0.04, day=12, accrued=0.1786</code></li>
+<li><code>cap=0.04, day=12, accrued=0.2957</code></li>
+<li><code>cap=0.04, day=12, accrued=0.4129</code></li>
+<li><code>cap=0.04, day=12, accrued=0.5300</code></li>
+<li><code>cap=0.06, day=0, accrued=-0.0500</code></li>
+<li><code>cap=0.06, day=0, accrued=-0.0357</code></li>
+<li><code>cap=0.06, day=0, accrued=-0.0214</code></li>
+<li><code>cap=0.06, day=0, accrued=-0.0071</code></li>
+<li><code>cap=0.06, day=0, accrued=0.0071</code></li>
+<li><code>cap=0.06, day=0, accrued=0.0214</code></li>
+<li><code>cap=0.06, day=0, accrued=0.0357</code></li>
+<li><code>cap=0.06, day=0, accrued=0.0500</code></li>
+<li><code>cap=0.06, day=3, accrued=-0.1100</code></li>
+<li><code>cap=0.06, day=3, accrued=-0.0614</code></li>
+<li><code>cap=0.06, day=3, accrued=-0.0129</code></li>
+<li><code>cap=0.06, day=3, accrued=0.0357</code></li>
+<li><code>cap=0.06, day=3, accrued=0.0843</code></li>
+<li><code>cap=0.06, day=3, accrued=0.1329</code></li>
+<li><code>cap=0.06, day=3, accrued=0.1814</code></li>
+<li><code>cap=0.06, day=3, accrued=0.2300</code></li>
+<li><code>cap=0.06, day=6, accrued=-0.1700</code></li>
+<li><code>cap=0.06, day=6, accrued=-0.0871</code></li>
+<li><code>cap=0.06, day=6, accrued=-0.0043</code></li>
+<li><code>cap=0.06, day=6, accrued=0.0786</code></li>
+<li><code>cap=0.06, day=6, accrued=0.1614</code></li>
+<li><code>cap=0.06, day=6, accrued=0.2443</code></li>
+<li><code>cap=0.06, day=6, accrued=0.3271</code></li>
+<li><code>cap=0.06, day=6, accrued=0.4100</code></li>
+<li><code>cap=0.06, day=9, accrued=-0.2300</code></li>
+<li><code>cap=0.06, day=9, accrued=-0.1129</code></li>
+<li><code>cap=0.06, day=9, accrued=0.0043</code></li>
+<li><code>cap=0.06, day=9, accrued=0.1214</code></li>
+<li><code>cap=0.06, day=9, accrued=0.2386</code></li>
+<li><code>cap=0.06, day=9, accrued=0.3557</code></li>
+<li><code>cap=0.06, day=9, accrued=0.4729</code></li>
+<li><code>cap=0.06, day=9, accrued=0.5900</code></li>
+<li><code>cap=0.06, day=12, accrued=-0.2900</code></li>
+<li><code>cap=0.06, day=12, accrued=-0.1386</code></li>
+<li><code>cap=0.06, day=12, accrued=0.0129</code></li>
+<li><code>cap=0.06, day=12, accrued=0.1643</code></li>
+<li><code>cap=0.06, day=12, accrued=0.3157</code></li>
+<li><code>cap=0.06, day=12, accrued=0.4671</code></li>
+<li><code>cap=0.06, day=12, accrued=0.6186</code></li>
+<li><code>cap=0.06, day=12, accrued=0.7700</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='european-expanded'><h2>European</h2><ul><li><code>K=80.0, vol=0.1, T=0.5, S=60.0</code></li>
+<li><code>K=80.0, vol=0.1, T=0.5, S=90.0</code></li>
+<li><code>K=80.0, vol=0.1, T=0.5, S=110.0</code></li>
+<li><code>K=80.0, vol=0.1, T=0.5, S=160.0</code></li>
+<li><code>K=80.0, vol=0.1, T=1.0, S=60.0</code></li>
+<li><code>K=80.0, vol=0.1, T=1.0, S=90.0</code></li>
+<li><code>K=80.0, vol=0.1, T=1.0, S=110.0</code></li>
+<li><code>K=80.0, vol=0.1, T=1.0, S=160.0</code></li>
+<li><code>K=80.0, vol=0.1, T=2.0, S=60.0</code></li>
+<li><code>K=80.0, vol=0.1, T=2.0, S=90.0</code></li>
+<li><code>K=80.0, vol=0.1, T=2.0, S=110.0</code></li>
+<li><code>K=80.0, vol=0.1, T=2.0, S=160.0</code></li>
+<li><code>K=80.0, vol=0.2, T=0.5, S=60.0</code></li>
+<li><code>K=80.0, vol=0.2, T=0.5, S=90.0</code></li>
+<li><code>K=80.0, vol=0.2, T=0.5, S=110.0</code></li>
+<li><code>K=80.0, vol=0.2, T=0.5, S=160.0</code></li>
+<li><code>K=80.0, vol=0.2, T=1.0, S=60.0</code></li>
+<li><code>K=80.0, vol=0.2, T=1.0, S=90.0</code></li>
+<li><code>K=80.0, vol=0.2, T=1.0, S=110.0</code></li>
+<li><code>K=80.0, vol=0.2, T=1.0, S=160.0</code></li>
+<li><code>K=80.0, vol=0.2, T=2.0, S=60.0</code></li>
+<li><code>K=80.0, vol=0.2, T=2.0, S=90.0</code></li>
+<li><code>K=80.0, vol=0.2, T=2.0, S=110.0</code></li>
+<li><code>K=80.0, vol=0.2, T=2.0, S=160.0</code></li>
+<li><code>K=80.0, vol=0.35, T=0.5, S=60.0</code></li>
+<li><code>K=80.0, vol=0.35, T=0.5, S=90.0</code></li>
+<li><code>K=80.0, vol=0.35, T=0.5, S=110.0</code></li>
+<li><code>K=80.0, vol=0.35, T=0.5, S=160.0</code></li>
+<li><code>K=80.0, vol=0.35, T=1.0, S=60.0</code></li>
+<li><code>K=80.0, vol=0.35, T=1.0, S=90.0</code></li>
+<li><code>K=80.0, vol=0.35, T=1.0, S=110.0</code></li>
+<li><code>K=80.0, vol=0.35, T=1.0, S=160.0</code></li>
+<li><code>K=80.0, vol=0.35, T=2.0, S=60.0</code></li>
+<li><code>K=80.0, vol=0.35, T=2.0, S=90.0</code></li>
+<li><code>K=80.0, vol=0.35, T=2.0, S=110.0</code></li>
+<li><code>K=80.0, vol=0.35, T=2.0, S=160.0</code></li>
+<li><code>K=100.0, vol=0.1, T=0.5, S=60.0</code></li>
+<li><code>K=100.0, vol=0.1, T=0.5, S=90.0</code></li>
+<li><code>K=100.0, vol=0.1, T=0.5, S=110.0</code></li>
+<li><code>K=100.0, vol=0.1, T=0.5, S=160.0</code></li>
+<li><code>K=100.0, vol=0.1, T=1.0, S=60.0</code></li>
+<li><code>K=100.0, vol=0.1, T=1.0, S=90.0</code></li>
+<li><code>K=100.0, vol=0.1, T=1.0, S=110.0</code></li>
+<li><code>K=100.0, vol=0.1, T=1.0, S=160.0</code></li>
+<li><code>K=100.0, vol=0.1, T=2.0, S=60.0</code></li>
+<li><code>K=100.0, vol=0.1, T=2.0, S=90.0</code></li>
+<li><code>K=100.0, vol=0.1, T=2.0, S=110.0</code></li>
+<li><code>K=100.0, vol=0.1, T=2.0, S=160.0</code></li>
+<li><code>K=100.0, vol=0.2, T=0.5, S=60.0</code></li>
+<li><code>K=100.0, vol=0.2, T=0.5, S=90.0</code></li>
+<li><code>K=100.0, vol=0.2, T=0.5, S=110.0</code></li>
+<li><code>K=100.0, vol=0.2, T=0.5, S=160.0</code></li>
+<li><code>K=100.0, vol=0.2, T=1.0, S=60.0</code></li>
+<li><code>K=100.0, vol=0.2, T=1.0, S=90.0</code></li>
+<li><code>K=100.0, vol=0.2, T=1.0, S=110.0</code></li>
+<li><code>K=100.0, vol=0.2, T=1.0, S=160.0</code></li>
+<li><code>K=100.0, vol=0.2, T=2.0, S=60.0</code></li>
+<li><code>K=100.0, vol=0.2, T=2.0, S=90.0</code></li>
+<li><code>K=100.0, vol=0.2, T=2.0, S=110.0</code></li>
+<li><code>K=100.0, vol=0.2, T=2.0, S=160.0</code></li>
+<li><code>K=100.0, vol=0.35, T=0.5, S=60.0</code></li>
+<li><code>K=100.0, vol=0.35, T=0.5, S=90.0</code></li>
+<li><code>K=100.0, vol=0.35, T=0.5, S=110.0</code></li>
+<li><code>K=100.0, vol=0.35, T=0.5, S=160.0</code></li>
+<li><code>K=100.0, vol=0.35, T=1.0, S=60.0</code></li>
+<li><code>K=100.0, vol=0.35, T=1.0, S=90.0</code></li>
+<li><code>K=100.0, vol=0.35, T=1.0, S=110.0</code></li>
+<li><code>K=100.0, vol=0.35, T=1.0, S=160.0</code></li>
+<li><code>K=100.0, vol=0.35, T=2.0, S=60.0</code></li>
+<li><code>K=100.0, vol=0.35, T=2.0, S=90.0</code></li>
+<li><code>K=100.0, vol=0.35, T=2.0, S=110.0</code></li>
+<li><code>K=100.0, vol=0.35, T=2.0, S=160.0</code></li>
+<li><code>K=120.0, vol=0.1, T=0.5, S=60.0</code></li>
+<li><code>K=120.0, vol=0.1, T=0.5, S=90.0</code></li>
+<li><code>K=120.0, vol=0.1, T=0.5, S=110.0</code></li>
+<li><code>K=120.0, vol=0.1, T=0.5, S=160.0</code></li>
+<li><code>K=120.0, vol=0.1, T=1.0, S=60.0</code></li>
+<li><code>K=120.0, vol=0.1, T=1.0, S=90.0</code></li>
+<li><code>K=120.0, vol=0.1, T=1.0, S=110.0</code></li>
+<li><code>K=120.0, vol=0.1, T=1.0, S=160.0</code></li>
+<li><code>K=120.0, vol=0.1, T=2.0, S=60.0</code></li>
+<li><code>K=120.0, vol=0.1, T=2.0, S=90.0</code></li>
+<li><code>K=120.0, vol=0.1, T=2.0, S=110.0</code></li>
+<li><code>K=120.0, vol=0.1, T=2.0, S=160.0</code></li>
+<li><code>K=120.0, vol=0.2, T=0.5, S=60.0</code></li>
+<li><code>K=120.0, vol=0.2, T=0.5, S=90.0</code></li>
+<li><code>K=120.0, vol=0.2, T=0.5, S=110.0</code></li>
+<li><code>K=120.0, vol=0.2, T=0.5, S=160.0</code></li>
+<li><code>K=120.0, vol=0.2, T=1.0, S=60.0</code></li>
+<li><code>K=120.0, vol=0.2, T=1.0, S=90.0</code></li>
+<li><code>K=120.0, vol=0.2, T=1.0, S=110.0</code></li>
+<li><code>K=120.0, vol=0.2, T=1.0, S=160.0</code></li>
+<li><code>K=120.0, vol=0.2, T=2.0, S=60.0</code></li>
+<li><code>K=120.0, vol=0.2, T=2.0, S=90.0</code></li>
+<li><code>K=120.0, vol=0.2, T=2.0, S=110.0</code></li>
+<li><code>K=120.0, vol=0.2, T=2.0, S=160.0</code></li>
+<li><code>K=120.0, vol=0.35, T=0.5, S=60.0</code></li>
+<li><code>K=120.0, vol=0.35, T=0.5, S=90.0</code></li>
+<li><code>K=120.0, vol=0.35, T=0.5, S=110.0</code></li>
+<li><code>K=120.0, vol=0.35, T=0.5, S=160.0</code></li>
+<li><code>K=120.0, vol=0.35, T=1.0, S=60.0</code></li>
+<li><code>K=120.0, vol=0.35, T=1.0, S=90.0</code></li>
+<li><code>K=120.0, vol=0.35, T=1.0, S=110.0</code></li>
+<li><code>K=120.0, vol=0.35, T=1.0, S=160.0</code></li>
+<li><code>K=120.0, vol=0.35, T=2.0, S=60.0</code></li>
+<li><code>K=120.0, vol=0.35, T=2.0, S=90.0</code></li>
+<li><code>K=120.0, vol=0.35, T=2.0, S=110.0</code></li>
+<li><code>K=120.0, vol=0.35, T=2.0, S=160.0</code></li>
+<li><code>K=140.0, vol=0.1, T=0.5, S=60.0</code></li>
+<li><code>K=140.0, vol=0.1, T=0.5, S=90.0</code></li>
+<li><code>K=140.0, vol=0.1, T=0.5, S=110.0</code></li>
+<li><code>K=140.0, vol=0.1, T=0.5, S=160.0</code></li>
+<li><code>K=140.0, vol=0.1, T=1.0, S=60.0</code></li>
+<li><code>K=140.0, vol=0.1, T=1.0, S=90.0</code></li>
+<li><code>K=140.0, vol=0.1, T=1.0, S=110.0</code></li>
+<li><code>K=140.0, vol=0.1, T=1.0, S=160.0</code></li>
+<li><code>K=140.0, vol=0.1, T=2.0, S=60.0</code></li>
+<li><code>K=140.0, vol=0.1, T=2.0, S=90.0</code></li>
+<li><code>K=140.0, vol=0.1, T=2.0, S=110.0</code></li>
+<li><code>K=140.0, vol=0.1, T=2.0, S=160.0</code></li>
+<li><code>K=140.0, vol=0.2, T=0.5, S=60.0</code></li>
+<li><code>K=140.0, vol=0.2, T=0.5, S=90.0</code></li>
+<li><code>K=140.0, vol=0.2, T=0.5, S=110.0</code></li>
+<li><code>K=140.0, vol=0.2, T=0.5, S=160.0</code></li>
+<li><code>K=140.0, vol=0.2, T=1.0, S=60.0</code></li>
+<li><code>K=140.0, vol=0.2, T=1.0, S=90.0</code></li>
+<li><code>K=140.0, vol=0.2, T=1.0, S=110.0</code></li>
+<li><code>K=140.0, vol=0.2, T=1.0, S=160.0</code></li>
+<li><code>K=140.0, vol=0.2, T=2.0, S=60.0</code></li>
+<li><code>K=140.0, vol=0.2, T=2.0, S=90.0</code></li>
+<li><code>K=140.0, vol=0.2, T=2.0, S=110.0</code></li>
+<li><code>K=140.0, vol=0.2, T=2.0, S=160.0</code></li>
+<li><code>K=140.0, vol=0.35, T=0.5, S=60.0</code></li>
+<li><code>K=140.0, vol=0.35, T=0.5, S=90.0</code></li>
+<li><code>K=140.0, vol=0.35, T=0.5, S=110.0</code></li>
+<li><code>K=140.0, vol=0.35, T=0.5, S=160.0</code></li>
+<li><code>K=140.0, vol=0.35, T=1.0, S=60.0</code></li>
+<li><code>K=140.0, vol=0.35, T=1.0, S=90.0</code></li>
+<li><code>K=140.0, vol=0.35, T=1.0, S=110.0</code></li>
+<li><code>K=140.0, vol=0.35, T=1.0, S=160.0</code></li>
+<li><code>K=140.0, vol=0.35, T=2.0, S=60.0</code></li>
+<li><code>K=140.0, vol=0.35, T=2.0, S=90.0</code></li>
+<li><code>K=140.0, vol=0.35, T=2.0, S=110.0</code></li>
+<li><code>K=140.0, vol=0.35, T=2.0, S=160.0</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='random-payoff-expanded'><h2>Random payoff</h2><p>Showing first 150 of 288 cases.</p><ul><li><code>base_market, random_piecewise_1, t=0.0, S=55.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.0, S=100.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.0, S=170.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.25, S=55.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.25, S=100.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.25, S=170.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.5, S=55.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.5, S=100.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.5, S=170.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.75, S=55.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.75, S=100.0</code></li>
+<li><code>base_market, random_piecewise_1, t=0.75, S=170.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.0, S=55.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.0, S=100.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.0, S=170.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.25, S=55.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.25, S=100.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.25, S=170.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.5, S=55.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.5, S=100.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.5, S=170.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.75, S=55.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.75, S=100.0</code></li>
+<li><code>base_market, random_piecewise_2, t=0.75, S=170.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.0, S=55.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.0, S=100.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.0, S=170.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.25, S=55.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.25, S=100.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.25, S=170.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.5, S=55.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.5, S=100.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.5, S=170.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.75, S=55.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.75, S=100.0</code></li>
+<li><code>base_market, random_piecewise_3, t=0.75, S=170.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.0, S=55.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.0, S=100.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.0, S=170.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.25, S=55.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.25, S=100.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.25, S=170.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.5, S=55.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.5, S=100.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.5, S=170.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.75, S=55.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.75, S=100.0</code></li>
+<li><code>base_market, random_piecewise_4, t=0.75, S=170.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.0, S=55.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.0, S=100.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.0, S=170.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.25, S=55.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.25, S=100.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.25, S=170.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.5, S=55.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.5, S=100.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.5, S=170.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.75, S=55.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.75, S=100.0</code></li>
+<li><code>base_market, random_piecewise_5, t=0.75, S=170.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.0, S=55.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.0, S=100.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.0, S=170.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.25, S=55.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.25, S=100.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.25, S=170.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.5, S=55.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.5, S=100.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.5, S=170.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.75, S=55.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.75, S=100.0</code></li>
+<li><code>base_market, random_piecewise_6, t=0.75, S=170.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.0, S=55.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.0, S=100.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.0, S=170.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.25, S=55.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.25, S=100.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.25, S=170.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.5, S=55.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.5, S=100.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.5, S=170.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.75, S=55.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.75, S=100.0</code></li>
+<li><code>base_market, random_piecewise_7, t=0.75, S=170.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.0, S=55.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.0, S=100.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.0, S=170.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.25, S=55.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.25, S=100.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.25, S=170.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.5, S=55.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.5, S=100.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.5, S=170.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.75, S=55.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.75, S=100.0</code></li>
+<li><code>base_market, random_piecewise_8, t=0.75, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.0, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.0, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.0, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.25, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.25, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.25, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.5, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.5, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.5, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.75, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.75, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_1, t=0.75, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.0, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.0, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.0, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.25, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.25, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.25, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.5, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.5, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.5, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.75, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.75, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_2, t=0.75, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.0, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.0, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.0, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.25, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.25, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.25, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.5, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.5, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.5, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.75, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.75, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_3, t=0.75, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.0, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.0, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.0, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.25, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.25, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.25, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.5, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.5, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.5, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.75, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.75, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_4, t=0.75, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_5, t=0.0, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_5, t=0.0, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_5, t=0.0, S=170.0</code></li>
+<li><code>low_vol, random_piecewise_5, t=0.25, S=55.0</code></li>
+<li><code>low_vol, random_piecewise_5, t=0.25, S=100.0</code></li>
+<li><code>low_vol, random_piecewise_5, t=0.25, S=170.0</code></li></ul><p><a href='#top'>Back to top</a></p></section><section id='slv-cliquet-expanded'><h2>SLV cliquet</h2><ul><li><code>month=0, S=50.0, v=0.01</code></li>
+<li><code>month=0, S=50.0, v=0.03</code></li>
+<li><code>month=0, S=50.0, v=0.06</code></li>
+<li><code>month=0, S=50.0, v=0.1</code></li>
+<li><code>month=0, S=50.0, v=0.16</code></li>
+<li><code>month=0, S=75.0, v=0.01</code></li>
+<li><code>month=0, S=75.0, v=0.03</code></li>
+<li><code>month=0, S=75.0, v=0.06</code></li>
+<li><code>month=0, S=75.0, v=0.1</code></li>
+<li><code>month=0, S=75.0, v=0.16</code></li>
+<li><code>month=0, S=100.0, v=0.01</code></li>
+<li><code>month=0, S=100.0, v=0.03</code></li>
+<li><code>month=0, S=100.0, v=0.06</code></li>
+<li><code>month=0, S=100.0, v=0.1</code></li>
+<li><code>month=0, S=100.0, v=0.16</code></li>
+<li><code>month=0, S=130.0, v=0.01</code></li>
+<li><code>month=0, S=130.0, v=0.03</code></li>
+<li><code>month=0, S=130.0, v=0.06</code></li>
+<li><code>month=0, S=130.0, v=0.1</code></li>
+<li><code>month=0, S=130.0, v=0.16</code></li>
+<li><code>month=0, S=180.0, v=0.01</code></li>
+<li><code>month=0, S=180.0, v=0.03</code></li>
+<li><code>month=0, S=180.0, v=0.06</code></li>
+<li><code>month=0, S=180.0, v=0.1</code></li>
+<li><code>month=0, S=180.0, v=0.16</code></li>
+<li><code>month=3, S=50.0, v=0.01</code></li>
+<li><code>month=3, S=50.0, v=0.03</code></li>
+<li><code>month=3, S=50.0, v=0.06</code></li>
+<li><code>month=3, S=50.0, v=0.1</code></li>
+<li><code>month=3, S=50.0, v=0.16</code></li>
+<li><code>month=3, S=75.0, v=0.01</code></li>
+<li><code>month=3, S=75.0, v=0.03</code></li>
+<li><code>month=3, S=75.0, v=0.06</code></li>
+<li><code>month=3, S=75.0, v=0.1</code></li>
+<li><code>month=3, S=75.0, v=0.16</code></li>
+<li><code>month=3, S=100.0, v=0.01</code></li>
+<li><code>month=3, S=100.0, v=0.03</code></li>
+<li><code>month=3, S=100.0, v=0.06</code></li>
+<li><code>month=3, S=100.0, v=0.1</code></li>
+<li><code>month=3, S=100.0, v=0.16</code></li>
+<li><code>month=3, S=130.0, v=0.01</code></li>
+<li><code>month=3, S=130.0, v=0.03</code></li>
+<li><code>month=3, S=130.0, v=0.06</code></li>
+<li><code>month=3, S=130.0, v=0.1</code></li>
+<li><code>month=3, S=130.0, v=0.16</code></li>
+<li><code>month=3, S=180.0, v=0.01</code></li>
+<li><code>month=3, S=180.0, v=0.03</code></li>
+<li><code>month=3, S=180.0, v=0.06</code></li>
+<li><code>month=3, S=180.0, v=0.1</code></li>
+<li><code>month=3, S=180.0, v=0.16</code></li>
+<li><code>month=6, S=50.0, v=0.01</code></li>
+<li><code>month=6, S=50.0, v=0.03</code></li>
+<li><code>month=6, S=50.0, v=0.06</code></li>
+<li><code>month=6, S=50.0, v=0.1</code></li>
+<li><code>month=6, S=50.0, v=0.16</code></li>
+<li><code>month=6, S=75.0, v=0.01</code></li>
+<li><code>month=6, S=75.0, v=0.03</code></li>
+<li><code>month=6, S=75.0, v=0.06</code></li>
+<li><code>month=6, S=75.0, v=0.1</code></li>
+<li><code>month=6, S=75.0, v=0.16</code></li>
+<li><code>month=6, S=100.0, v=0.01</code></li>
+<li><code>month=6, S=100.0, v=0.03</code></li>
+<li><code>month=6, S=100.0, v=0.06</code></li>
+<li><code>month=6, S=100.0, v=0.1</code></li>
+<li><code>month=6, S=100.0, v=0.16</code></li>
+<li><code>month=6, S=130.0, v=0.01</code></li>
+<li><code>month=6, S=130.0, v=0.03</code></li>
+<li><code>month=6, S=130.0, v=0.06</code></li>
+<li><code>month=6, S=130.0, v=0.1</code></li>
+<li><code>month=6, S=130.0, v=0.16</code></li>
+<li><code>month=6, S=180.0, v=0.01</code></li>
+<li><code>month=6, S=180.0, v=0.03</code></li>
+<li><code>month=6, S=180.0, v=0.06</code></li>
+<li><code>month=6, S=180.0, v=0.1</code></li>
+<li><code>month=6, S=180.0, v=0.16</code></li>
+<li><code>month=9, S=50.0, v=0.01</code></li>
+<li><code>month=9, S=50.0, v=0.03</code></li>
+<li><code>month=9, S=50.0, v=0.06</code></li>
+<li><code>month=9, S=50.0, v=0.1</code></li>
+<li><code>month=9, S=50.0, v=0.16</code></li>
+<li><code>month=9, S=75.0, v=0.01</code></li>
+<li><code>month=9, S=75.0, v=0.03</code></li>
+<li><code>month=9, S=75.0, v=0.06</code></li>
+<li><code>month=9, S=75.0, v=0.1</code></li>
+<li><code>month=9, S=75.0, v=0.16</code></li>
+<li><code>month=9, S=100.0, v=0.01</code></li>
+<li><code>month=9, S=100.0, v=0.03</code></li>
+<li><code>month=9, S=100.0, v=0.06</code></li>
+<li><code>month=9, S=100.0, v=0.1</code></li>
+<li><code>month=9, S=100.0, v=0.16</code></li>
+<li><code>month=9, S=130.0, v=0.01</code></li>
+<li><code>month=9, S=130.0, v=0.03</code></li>
+<li><code>month=9, S=130.0, v=0.06</code></li>
+<li><code>month=9, S=130.0, v=0.1</code></li>
+<li><code>month=9, S=130.0, v=0.16</code></li>
+<li><code>month=9, S=180.0, v=0.01</code></li>
+<li><code>month=9, S=180.0, v=0.03</code></li>
+<li><code>month=9, S=180.0, v=0.06</code></li>
+<li><code>month=9, S=180.0, v=0.1</code></li>
+<li><code>month=9, S=180.0, v=0.16</code></li>
+<li><code>month=12, S=50.0, v=0.01</code></li>
+<li><code>month=12, S=50.0, v=0.03</code></li>
+<li><code>month=12, S=50.0, v=0.06</code></li>
+<li><code>month=12, S=50.0, v=0.1</code></li>
+<li><code>month=12, S=50.0, v=0.16</code></li>
+<li><code>month=12, S=75.0, v=0.01</code></li>
+<li><code>month=12, S=75.0, v=0.03</code></li>
+<li><code>month=12, S=75.0, v=0.06</code></li>
+<li><code>month=12, S=75.0, v=0.1</code></li>
+<li><code>month=12, S=75.0, v=0.16</code></li>
+<li><code>month=12, S=100.0, v=0.01</code></li>
+<li><code>month=12, S=100.0, v=0.03</code></li>
+<li><code>month=12, S=100.0, v=0.06</code></li>
+<li><code>month=12, S=100.0, v=0.1</code></li>
+<li><code>month=12, S=100.0, v=0.16</code></li>
+<li><code>month=12, S=130.0, v=0.01</code></li>
+<li><code>month=12, S=130.0, v=0.03</code></li>
+<li><code>month=12, S=130.0, v=0.06</code></li>
+<li><code>month=12, S=130.0, v=0.1</code></li>
+<li><code>month=12, S=130.0, v=0.16</code></li>
+<li><code>month=12, S=180.0, v=0.01</code></li>
+<li><code>month=12, S=180.0, v=0.03</code></li>
+<li><code>month=12, S=180.0, v=0.06</code></li>
+<li><code>month=12, S=180.0, v=0.1</code></li>
+<li><code>month=12, S=180.0, v=0.16</code></li></ul><p><a href='#top'>Back to top</a></p></section>
+</body>
+</html>
