@@ -143,6 +143,15 @@ Asian, and barrier cases. PCHIP remains the generic one-feature default because
 it was essentially tied for best balanced accuracy and had zero local
 overshoot.
 
+The method motivation and selection guide is:
+
+```text
+Markdown/MethodStudy/findings/method_motivation_and_selection.md
+```
+
+It explains why each fitting method exists, when it should beat another method,
+and which further improvements are worth trying next.
+
 `AutocallableMain.py` runs a single-underlying autocallable proxy grid with
 five payoff/market cases and four observation dates.
 

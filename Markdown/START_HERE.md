@@ -20,20 +20,24 @@ changing code or rerunning heavy experiments.
 2. `European/findings/european_option_proxy_findings.md`
 3. `MethodStudy/findings/one_dimensional_fitting_findings.md`
 4. `MethodStudy/findings/expanded_spline_study.md`
-5. `Asian/findings/asian_option_proxy_findings.md`
-6. `American/findings/american_option_proxy_findings.md`
-7. `Barrier/findings/barrier_proxy_findings.md`
-8. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
-9. `MethodStudy/results/current_performance_matrix.md`
-10. `MethodStudy/results/correctness_tests.md`
-11. `MethodStudy/results/timing_performance_summary.md`
-12. `MethodStudy/results/expanded_coverage_summary.md`
-13. Product result summaries under `*/results/summary.md`
+5. `MethodStudy/findings/method_motivation_and_selection.md`
+6. `Asian/findings/asian_option_proxy_findings.md`
+7. `American/findings/american_option_proxy_findings.md`
+8. `Barrier/findings/barrier_proxy_findings.md`
+9. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
+10. `MethodStudy/results/current_performance_matrix.md`
+11. `MethodStudy/results/correctness_tests.md`
+12. `MethodStudy/results/timing_performance_summary.md`
+13. `MethodStudy/results/expanded_coverage_summary.md`
+14. Product result summaries under `*/results/summary.md`
 
 ## Important Current Decisions
 
 - Use SciPy `PchipInterpolator` as the default one-feature proxy unless a new
   experiment gives a clear reason to replace it.
+- Use `MethodStudy/findings/method_motivation_and_selection.md` before adding
+  new fitting methods; it explains why each method exists and when one should
+  beat another.
 - Use Sobol low-discrepancy paths and antithetic pairing for MC label generation
   and benchmarks whenever practical.
 - Use likelihood-ratio or mixture importance sampling for tail-sensitive labels
