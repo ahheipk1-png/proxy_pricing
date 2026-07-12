@@ -439,6 +439,163 @@ Why it can be worse:
 
 Current role: safety fallback for basket cliquet hard cases.
 
+## GPU Acceleration: Training And Benchmarking
+
+GPU acceleration is not a new proxy method. It is a computational backend. The
+right question is: which part of the workflow has enough parallel arithmetic to
+justify moving data to a GPU?
+
+The best candidate is **Monte Carlo label generation**:
+
+```text
+state x_i -> simulate many paths -> payoff average -> training label V(x_i)
+```
+
+This is embarrassingly parallel across:
+
+- training states;
+- paths;
+- assets;
+- time steps;
+- payoff variants;
+- accrued-return layers;
+- likelihood-ratio mixture components.
+
+The same logic applies to independent MC benchmarks. In fact, benchmarks may be
+an even cleaner GPU target because they often use more paths than training
+labels.
+
+## GPU Usefulness By Task
+
+| Task | GPU usefulness | Rationale |
+|---|---|---|
+| MC training labels | High | Paths and states are massively parallel |
+| MC benchmarks | High | Same as labels, often with more paths |
+| Basket Asian simulation | High | 10 assets, correlations, many state points |
+| SLV cliquet simulation | High | Many time steps, variance states, coupons, LR weights |
+| Basket cliquet simulation | High | Grouped accrued labels and payoff variants parallelize well |
+| Barrier simulation | Medium to high | Monitoring and Brownian-bridge factors parallelize, but barrier branching needs care |
+| PCHIP/Akima/linear fitting | Low | Sorting and local slope construction are tiny CPU tasks |
+| Natural cubic/spline fitting | Low to medium | Usually small; GPU helps only if many fits are batched |
+| Chebyshev ridge fitting | Low to medium | CPU is fine for small bases; GPU can help with large design matrices |
+| Sparse basis evaluation | Medium | Building `A`, `A.T @ A`, and batched predictions can be parallel |
+| Neural-network training | High | Minibatch matrix operations are GPU-native |
+| Reports, CSV, PDF, plotting | Low | Not arithmetic-heavy |
+
+## Training: What Should Move To GPU?
+
+For current defaults:
+
+- PCHIP training should stay on CPU.
+- Akima, linear, and natural cubic interpolation should stay on CPU.
+- Small Chebyshev ridge fits should stay on CPU unless there are many batched
+  surfaces.
+- Neural-network training, if added, should use GPU when available.
+- High-dimensional basis evaluation may use GPU if `A` is large enough.
+- MC label generation and MC benchmarking are the first GPU targets.
+
+The practical split is:
+
+```text
+GPU:
+  path simulation
+  payoff evaluation
+  likelihood-ratio weights
+  benchmark labels
+  neural-network training
+  possibly large batched basis matrices
+
+CPU:
+  PCHIP/Akima/spline fitting
+  small ridge solves
+  validation tables
+  reports and documentation
+```
+
+## Sobol Caveat
+
+The project currently prefers Sobol low-discrepancy paths. This matters.
+GPU pseudo-random normals are easy, but replacing Sobol with pseudo-random paths
+just to use the GPU may increase variance.
+
+Reasonable GPU designs are:
+
+1. Generate Sobol points on CPU and transfer them to GPU in chunks.
+2. Use a GPU library with reliable Sobol or quasi-Monte Carlo support.
+3. Compare GPU pseudo-random antithetic paths against CPU Sobol at equal error,
+   not equal path count.
+
+The comparison should be:
+
+```text
+CPU Sobol time and error
+GPU pseudo/antithetic time and error
+GPU Sobol/QMC time and error, if available
+```
+
+## Likelihood-Ratio Mixture Caveat
+
+Likelihood-ratio importance sampling is also GPU-friendly, but tail shifts can
+produce very small or very large weights. A GPU implementation should compute
+weights in log space when possible:
+
+```text
+log_weight = log p(z) - log q(z)
+weighted_payoff = payoff * exp(log_weight)
+```
+
+For mixture proposals, the denominator must be the full mixture density, not
+only the sampled component density.
+
+## Proposed Architecture
+
+Add a backend abstraction rather than rewriting every product script:
+
+```text
+simulate_labels(contract, states, config, backend="cpu_sobol")
+```
+
+Candidate backends:
+
+```text
+cpu_sobol
+gpu_sobol
+gpu_pseudo_antithetic
+gpu_pseudo_lr_mixture
+```
+
+The validation report should compare:
+
+- sample-generation time;
+- label aggregation time;
+- benchmark time;
+- final proxy error;
+- standard error or confidence interval;
+- memory usage;
+- reproducibility.
+
+## Priority Products For GPU Experiments
+
+1. Basket Asian: 10 underlyings, many state points, correlated paths.
+2. Basket cliquet: grouped labels, payoff variants, LR mixtures.
+3. SLV cliquet: variance process plus path-dependent coupons.
+4. Barrier options: many monitored paths and Brownian-bridge factors.
+5. Asian option benchmark/training: lower-dimensional but still path-heavy.
+
+## Open Questions
+
+This remains open for discussion. The main questions are:
+
+- Can GPU Sobol/QMC preserve the variance benefit we currently rely on?
+- Is data transfer small enough relative to path simulation time?
+- Do branch-heavy barrier and cliquet payoffs reduce GPU efficiency?
+- Should we first implement a generic GPU MC engine or a product-specific pilot?
+- Would a neural-network proxy become attractive once GPU training exists?
+
+My current view is conservative: first use GPU to accelerate MC labels and
+benchmarks. Only after that should we spend effort on GPU fitting, except for
+neural networks or very large batched Chebyshev designs.
+
 ## Why The Current Defaults Make Sense
 
 ### Why PCHIP Is The One-Feature Default
@@ -571,4 +728,3 @@ dimension where sparse polynomial basis selection becomes hard.
 - Use sparse Chebyshev with baseline and PCA for higher-dimensional products.
 - For basket cliquet order-statistic cases, keep the cached Sobol/LR safety
   proxy until a fitted method proves it can control worst-case error.
-

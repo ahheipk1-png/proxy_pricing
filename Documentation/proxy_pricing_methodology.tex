@@ -621,6 +621,72 @@ still has MC error.
 
 This is the current safety fallback for basket cliquet hard cases.
 
+\section{GPU acceleration}
+GPU acceleration is not a new pricing theory and not a new proxy family. It is
+a computational backend choice. The important question is where the parallel
+work actually lives.
+
+The strongest GPU candidate is Monte Carlo label generation:
+\[
+  x_i \longmapsto
+  \frac1N\sum_{n=1}^N e^{-r\tau}H(x_i,Z_n).
+\]
+For each state \(x_i\), many paths can be simulated independently. For each
+path, many assets, time steps, payoff variants, and likelihood-ratio weights
+can be computed in parallel. This is exactly the kind of work GPUs are good at.
+
+The same argument applies to independent benchmark generation. If a benchmark
+requires hundreds of thousands or millions of paths at many validation states,
+then the benchmark is often more GPU-friendly than the final fitted proxy.
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.30\linewidth}>{\raggedright\arraybackslash}p{0.28\linewidth}>{\raggedright\arraybackslash}p{0.34\linewidth}@{}}
+\toprule
+Task & GPU usefulness & Rationale\\
+\midrule
+MC training labels & High & Paths, states, assets, and payoff variants are massively parallel.\\
+MC benchmarks & High & Same structure as training labels, often with even more paths.\\
+Basket Asian simulation & High & Many assets, correlations, and state points.\\
+SLV and basket cliquet simulation & High & Many time steps, variance states, coupons, and LR weights.\\
+Barrier simulation & Medium to high & Path monitoring and Brownian-bridge factors are parallel, but branch behavior near barriers needs care.\\
+PCHIP, Akima, linear interpolation & Low & Sorting and slope construction are small CPU tasks.\\
+Small Chebyshev ridge fits & Low to medium & CPU is usually enough unless the design matrix is large or many fits are batched.\\
+Large sparse basis evaluation & Medium & GPU can help build \(A\), \(A^\top A\), and batched predictions.\\
+Neural-network training & High & Matrix operations and minibatch training are GPU-native.\\
+\bottomrule
+\end{longtable}
+
+The current practical recommendation is therefore not ``move everything to the
+GPU.'' It is to use the GPU for labels and heavy high-dimensional training,
+while keeping small deterministic fitting and reporting on CPU.
+
+There is one important caveat. This project prefers Sobol and other
+low-discrepancy designs for MC labels. GPU pseudo-random normals are easy, but
+replacing Sobol with pseudo-random paths just to use the GPU could increase
+variance. A careful GPU plan should test one of the following:
+\begin{itemize}
+  \item generate Sobol points on CPU and transfer them to GPU in chunks;
+  \item use a GPU library with reliable Sobol or quasi-Monte Carlo support;
+  \item compare GPU pseudo-random antithetic labels against CPU Sobol labels at
+        equal error, not merely equal path count.
+\end{itemize}
+
+Likelihood-ratio mixtures also need numerical care on GPU. It is safer to
+compute likelihood weights in log space and normalize only when necessary,
+because tail shifts can create very small or very large weights.
+
+The proposed architecture is a backend abstraction:
+\[
+  \operatorname{simulate\_labels}(\text{contract},\text{states},\text{config},\text{backend}).
+\]
+The backend choices could include CPU Sobol, GPU Sobol, and GPU
+pseudo-random antithetic modes. The validation report should compare
+wall time, standard error, and final proxy error for each backend.
+
+This is still open for discussion. GPU acceleration is most attractive if the
+training or benchmark time is dominated by paths. It is less attractive if the
+run is dominated by Python overhead, file output, small spline fits, or model
+logic with heavy branching.
+
 \section{Recommended method ladder}
 Before inventing a new method, use this sequence:
 \begin{enumerate}
@@ -639,6 +705,8 @@ Before inventing a new method, use this sequence:
   \item If the product is high-dimensional, add baseline plus residual and PCA.
   \item If strict max error still fails, use adaptive sampling or a cached
         Sobol/LR safety proxy in the hard region.
+  \item If label or benchmark generation dominates runtime, test a GPU MC
+        backend while preserving Sobol/LR accuracy controls.
 \end{enumerate}
 
 \section{Further improvements}
@@ -650,6 +718,8 @@ The most valuable next improvements are:
         convexity, or bounds are known;
   \item adaptive sparse Chebyshev basis selection;
   \item product-aware LR mixture components;
+  \item GPU backends for MC label generation, benchmarks, and neural-network
+        training;
   \item outer-scenario weighted validation for PFE;
   \item neural-network benchmarks for genuinely high-dimensional products.
 \end{itemize}
