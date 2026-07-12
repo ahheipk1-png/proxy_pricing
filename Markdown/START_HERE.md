@@ -18,19 +18,20 @@ changing code or rerunning heavy experiments.
 
 1. `README.md`
 2. `European/findings/european_option_proxy_findings.md`
-3. `MethodStudy/findings/one_dimensional_fitting_findings.md`
-4. `MethodStudy/findings/expanded_spline_study.md`
-5. `MethodStudy/findings/feature_engineering_guide.md`
-6. `MethodStudy/findings/method_motivation_and_selection.md`
-7. `Asian/findings/asian_option_proxy_findings.md`
-8. `American/findings/american_option_proxy_findings.md`
-9. `Barrier/findings/barrier_proxy_findings.md`
-10. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
-11. `MethodStudy/results/current_performance_matrix.md`
-12. `MethodStudy/results/correctness_tests.md`
-13. `MethodStudy/results/timing_performance_summary.md`
-14. `MethodStudy/results/expanded_coverage_summary.md`
-15. Product result summaries under `*/results/summary.md`
+3. `European/findings/european_vol_rate_proxy.md`
+4. `MethodStudy/findings/one_dimensional_fitting_findings.md`
+5. `MethodStudy/findings/expanded_spline_study.md`
+6. `MethodStudy/findings/feature_engineering_guide.md`
+7. `MethodStudy/findings/method_motivation_and_selection.md`
+8. `Asian/findings/asian_option_proxy_findings.md`
+9. `American/findings/american_option_proxy_findings.md`
+10. `Barrier/findings/barrier_proxy_findings.md`
+11. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
+12. `MethodStudy/results/current_performance_matrix.md`
+13. `MethodStudy/results/correctness_tests.md`
+14. `MethodStudy/results/timing_performance_summary.md`
+15. `MethodStudy/results/expanded_coverage_summary.md`
+16. Product result summaries under `*/results/summary.md`
 
 ## Important Current Decisions
 

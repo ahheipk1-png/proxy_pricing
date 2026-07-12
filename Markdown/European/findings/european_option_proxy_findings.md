@@ -272,3 +272,30 @@ The best finding is:
 
 For this European benchmark, the no-asymptotic tail-biased MC proxy achieved sub-1% max
 relative error across the tested time slices.
+
+## Volatility And Rate As Features
+
+A follow-up 3D proxy test is documented in
+`Markdown/European/findings/european_vol_rate_proxy.md`.
+
+The tested feature vector was:
+
+```text
+(d1, volatility, risk-free rate)
+```
+
+The best result used log sparse Chebyshev regression, degree 7, with 120 basis
+terms. Training used 931 Chebyshev-spaced states and 4,096 shifted 1D Sobol MC
+paths per state. On a 10,309-point uniform test grid, the shifted-MC proxy
+achieved approximately:
+
+| Option | Max % Error | P99 % Error | Avg % Error |
+|---|---:|---:|---:|
+| call | 0.493% | 0.487% | 0.191% |
+| put | 0.489% | 0.482% | 0.204% |
+
+The important lesson was that the feature coordinate matters more than simply
+adding more polynomial degree. The `(d1, vol, rate)` coordinate stayed stable,
+while raw spot or log-moneyness coordinates were much worse over the same wide
+vol/rate box. Chebyshev-spaced training states were also important; uniform
+training nodes made the higher-degree Chebyshev fits unstable.
