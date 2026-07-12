@@ -62,11 +62,13 @@
 \chapter*{Reader's Guide}
 This document is written as a second-year undergraduate text. It assumes calculus, linear algebra, basic probability, and a willingness to read a few stochastic-process formulas. The goal is not to hide the implementation behind jargon. The goal is to explain the finance problem, motivate the proxy solution, show the diagnostic graphs, and then derive the mathematics carefully enough that another researcher can improve the method.
 
-The first three body chapters are intentionally practical:
+The first five body chapters are intentionally practical:
 \begin{itemize}
   \item Motivation: why repeated pricing creates a computational problem.
   \item Solution: how the proxy workflow solves the problem.
   \item Graphs: how to read the value and error diagnostics.
+  \item Examples: how the state choice changes by product.
+  \item Method selection: why each proxy method exists and when it should win.
 \end{itemize}
 
 The later chapters explain the finance, the mathematics, and the implementation details. The appendices give line-by-line proofs for the formulas used in the code. Every nontrivial implementation trick is classified as one of:
@@ -354,6 +356,303 @@ At one state, asset 1 may be most likely to be worst. At a nearby state, asset 2
 \end{example}
 
 This is why basket cliquet was harder than European or Asian options. The proxy must handle not only level and volatility but also cross-sectional ranking behavior.
+
+\chapter{Method Motivation and Selection}
+
+\section{How to decide that one method is better}
+A proxy method is not better in the abstract. It is better for a particular
+error mode, product shape, label quality, and dimension. The project therefore
+compares methods using several criteria:
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.26\linewidth}>{\raggedright\arraybackslash}p{0.66\linewidth}@{}}
+\toprule
+Criterion & Meaning\\
+\midrule
+Worst relative error & Controls the bad validation point and matters for production sign-off.\\
+p99 relative error & Focuses on tail quality without letting one pathological point dominate.\\
+Signed error smoothness & Reveals missing knots, Monte Carlo noise, extrapolation artifacts, and local bias.\\
+Shape safety & Avoids negative prices, artificial extrema, and exercise violations.\\
+Training cost & Time to generate labels and fit the proxy.\\
+Pricing speed & Time to evaluate the proxy after training.\\
+Generality & Whether the same idea transfers to the next product family.\\
+\bottomrule
+\end{longtable}
+
+For PFE and exposure work, shape safety can matter as much as a small average
+accuracy improvement. A method that reduces average error but creates a fake
+local bump can still be dangerous because exposure quantiles depend on tails
+and local maxima.
+
+\section{Decision map}
+The current practical map is:
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.34\linewidth}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.31\linewidth}@{}}
+\toprule
+Situation & First method to try & Reason\\
+\midrule
+One feature, clean labels, kinks possible & PCHIP & Local, shape-preserving, no artificial extrema.\\
+One feature, many slope changes & Akima or MAKIMA & Local cubic slopes react smoothly to uneven local behavior.\\
+One feature, very smooth global surface & Chebyshev or Bernstein ridge & Regularized global basis denoises MC labels.\\
+One feature, noisy labels & Smoothing spline or P-spline & Trades exact interpolation for lower variance.\\
+Early-exercise continuation & PCHIP continuation plus exact max & Avoids oscillatory exercise boundary errors.\\
+Known floor or cap & Bounded target plus PCHIP or Chebyshev & Enforces financial bounds by construction.\\
+Smooth multi-feature proxy & Sparse Chebyshev ridge & Fast, stable, interpretable, convex fit.\\
+Correlated basket proxy & Baseline plus PCA sparse correction & Captures level and composition without a full tensor grid.\\
+Order-statistic basket cliquet & Cached Sobol/LR safety proxy & Switching surfaces are too hard for one smooth fitted surface.\\
+\bottomrule
+\end{longtable}
+
+\section{Linear interpolation}
+Linear interpolation is the simplest local baseline. It connects neighboring
+labels by straight lines.
+
+It can be better when labels are noisy, when no artificial curvature is
+acceptable, or when an audit needs a transparent benchmark. It can be worse
+because it is only first-order accurate on smooth curves and can require a
+dense grid to match cubic accuracy.
+
+Its main role is diagnostic. If a complicated method performs much worse than
+linear interpolation, the complicated method is probably unstable for that
+product.
+
+\section{PCHIP}
+PCHIP is a local piecewise cubic Hermite interpolant with slope limiting. Its
+motivation is financial shape safety: option prices often have monotone
+regions, flat tails, exercise kinks, and barrier transitions.
+
+PCHIP can be better because it is local, fast, shape-preserving on monotone
+data, and resistant to artificial extrema. In the expanded one-feature study it
+had zero local overshoot. It can be worse because it interpolates MC labels
+exactly. If labels are visibly noisy, PCHIP preserves that roughness instead of
+denoising it.
+
+PCHIP remains the generic one-feature default because it is the best compromise
+between accuracy, locality, shape safety, speed, and explainability.
+
+\section{Akima and MAKIMA}
+Akima methods also build local cubic interpolants, but their slopes are
+weighted from nearby secants rather than limited primarily for monotonicity.
+The motivation is to handle local slope changes smoothly.
+
+They can be better when the target has many local slope changes but does not
+require strict monotonicity. This is why Akima was strong in the Asian
+adjusted-moneyness and random-payoff tests. They can be worse because they are
+less strictly shape-preserving than PCHIP and can introduce small overshoot.
+
+Akima is the first local challenger when PCHIP looks too conservative or too
+angular.
+
+\section{Natural cubic interpolation}
+Natural cubic interpolation passes through all labels and gives a twice
+continuously differentiable curve with zero second derivative at the endpoints.
+
+It can be better when the true value surface is smooth and labels are clean.
+It was fractionally best on the product-balanced p99 metric in the expanded
+one-feature study. It can be worse because it is globally coupled and can
+overshoot between labels. That is a serious drawback near barriers, exercise
+boundaries, and payoff tails.
+
+The conclusion is that natural cubic interpolation is a credible accuracy
+challenger, but not the default for risk use because its small accuracy edge
+did not compensate for overshoot risk.
+
+\section{B-spline regression}
+B-spline regression represents a curve using local polynomial basis functions.
+It is the stable version of regression splines and truncated-power splines.
+
+It can be better when MC labels are noisy and exact interpolation is too
+literal. It can place flexibility near important regions through knot choice.
+It can be worse because knot placement and regularization become design
+choices. If knots miss a barrier or exercise feature, the method can blur the
+feature.
+
+B-spline regression is a good denoising candidate, not the simplest production
+default.
+
+\section{Smoothing splines and P-splines}
+A smoothing spline balances label fit and roughness:
+\[
+  \sum_i (y_i-f(x_i))^2+\lambda\int (f''(x))^2\,\dd x.
+\]
+A P-spline uses a B-spline basis with a penalty on coefficient differences.
+Both methods are motivated by MC noise reduction.
+
+They can be better when label variance is the main problem. They can be worse
+when the smoothing penalty blurs a true kink, barrier transition, or exercise
+boundary. Generic smoothing parameters can also underfit steep log-price tails.
+
+The practical use is: try them after improving labels with Sobol, antithetics,
+control variates, and importance sampling. They should not be used to hide a
+bad simulator.
+
+\section{Adaptive P-splines and local regression}
+Adaptive P-splines allow different smoothness in different regions. LOESS fits
+local low-degree polynomials around each prediction point. Both are motivated
+by varying local behavior.
+
+They can be better near curves with smooth tails and sharp transition regions.
+They can be worse because they introduce more hyperparameters and are harder to
+audit. LOESS can also be slow at pricing time unless carefully cached.
+
+These methods are useful research tools when ordinary PCHIP or fixed-smoothing
+splines leave visible structured errors.
+
+\section{Gaussian-process smoothers}
+Gaussian-process smoothers treat the unknown price function as a random smooth
+function with a covariance kernel.
+
+They can be better because they provide uncertainty estimates and can guide
+adaptive state sampling. They can be worse because training scales poorly with
+many states, kernel choices matter, and pricing is slower than interpolation or
+linear regression.
+
+Their best role in this project is experimental design: use uncertainty to
+choose where to simulate more labels.
+
+\section{Chebyshev ridge}
+Chebyshev polynomials are well conditioned on \([-1,1]\), and ridge
+regularization stabilizes noisy labels. This makes Chebyshev ridge attractive
+for smooth value surfaces.
+
+It can be better because it is fast, convex, stable after scaling, and able to
+denoise through regularization. It can be worse near kinks, barriers, and
+switching surfaces because it is a global basis. High degree can also overfit
+MC noise.
+
+For smooth European-style surfaces and low-dimensional smooth corrections,
+Chebyshev ridge is often the strongest global method.
+
+\section{Piecewise Chebyshev}
+Piecewise Chebyshev tries to keep spectral accuracy while reducing the global
+oscillation problem.
+
+It can be better when different regions of the state space have different
+smoothness. It can be worse because the breakpoints, overlaps, and continuity
+rules become new modeling choices.
+
+It is a promising bridge between local PCHIP and global Chebyshev, especially
+for products with smooth pieces separated by transition regions.
+
+\section{Bernstein and Bezier methods}
+Bernstein polynomials have useful shape properties on bounded intervals.
+Bezier curves are an equivalent geometric representation of polynomial
+segments.
+
+They can be better when positivity, monotonicity, or convexity constraints are
+imposed through coefficients. They can be worse when used unconstrained,
+because they are still global fits. A piecewise Bezier curve using PCHIP slopes
+is not a new method; it is PCHIP written in Bezier form.
+
+Their best future use is constrained regression when the finance gives a known
+shape.
+
+\section{Floater-Hormann rational interpolation}
+Floater-Hormann interpolation is a pole-free barycentric rational method. It is
+motivated by the fact that rational functions can approximate some smooth
+curves better than polynomials.
+
+It can be better on difficult smooth approximation problems. It can be worse
+for option proxies because it does not automatically respect price bounds or
+shape constraints. In the expanded study it produced unacceptable excursions
+on some barrier log-value tests.
+
+It is rejected as a generic default.
+
+\section{Sparse Chebyshev for multiple features}
+In more than one feature, the full tensor polynomial basis grows too quickly.
+Sparse Chebyshev ridge keeps low-order and payoff-relevant interactions.
+
+It can be better because the fit is convex, fast at pricing time,
+interpretable, and compatible with analytic derivatives. It can be worse
+because the basis terms must be selected carefully. Missing an important
+interaction creates bias that more paths will not remove.
+
+The rule is: use sparse Chebyshev only after scaling features and thinking
+carefully about which interactions the payoff can create.
+
+\section{Baseline plus residual}
+A baseline plus residual proxy uses finance to explain the main price shape and
+fits only the correction:
+\[
+  V(x)=B(x)R(x)
+  \qquad\text{or}\qquad
+  V(x)=B(x)+\varepsilon_{\rm res}(x).
+\]
+
+It can be better because the residual is flatter and lower dimensional than
+the raw value. It can be worse if the baseline is poor or nearly zero in an
+important region. The ratio target must therefore include a floor.
+
+This is one of the most important ideas for higher-dimensional products:
+feature design and baseline design usually matter more than the name of the
+regression method.
+
+\section{PCA features}
+PCA is motivated by basket structure. A basket can have many spots, but much
+of the variation is common level plus a few dispersion directions.
+
+PCA can be better because it reduces dimension while preserving dominant
+cross-sectional variation. It can be worse because it is linear and
+unsupervised. For order-statistic payoffs, the most important direction may be
+an extreme or ranking direction, not the largest-variance direction.
+
+PCA should therefore be used together with payoff-aware features such as basket
+level, accrued return, volatility state, and floor/cap cushion.
+
+\section{Neural networks}
+Neural networks are flexible high-dimensional function approximators. They are
+motivated by products whose interactions are too complex for a small sparse
+polynomial basis.
+
+They can be better in genuinely high dimension, especially with large training
+sets. They can be worse because they are harder to audit, need architecture and
+training choices, and do not automatically respect financial constraints.
+
+They are a future benchmark for high-dimensional exotics, not the current
+default.
+
+\section{Cached Sobol/LR safety proxy}
+Some products are too hard for one fitted smooth surface. Basket cliquet
+order-statistic coupons can switch which asset is best or worst. A cached
+Sobol likelihood-ratio safety proxy prices difficult states by reusing a strong
+simulator rather than relying on a weak fitted extrapolation.
+
+It can be better because it is much safer in discontinuous or switching
+regions. It can be worse because it is slower than an analytic fitted proxy and
+still has MC error.
+
+This is the current safety fallback for basket cliquet hard cases.
+
+\section{Recommended method ladder}
+Before inventing a new method, use this sequence:
+\begin{enumerate}
+  \item Verify that the state is pricing-sufficient.
+  \item Add exact payoff regions: maturity, intrinsic value, barrier hit state,
+        floor/cap tails, and in/out parity.
+  \item Improve labels using Sobol paths, antithetics, control variates, common
+        random numbers, and LR mixture importance sampling.
+  \item Choose a financially scaled coordinate such as \(d_1\), adjusted
+        moneyness, accrued cushion, normalized variance, or PCA score.
+  \item Try PCHIP for one feature and sparse Chebyshev for several smooth
+        features.
+  \item If labels are noisy, test smoothing spline or P-spline.
+  \item If local slope changes dominate, test Akima or MAKIMA.
+  \item If the target is globally smooth, test Chebyshev or Bernstein ridge.
+  \item If the product is high-dimensional, add baseline plus residual and PCA.
+  \item If strict max error still fails, use adaptive sampling or a cached
+        Sobol/LR safety proxy in the hard region.
+\end{enumerate}
+
+\section{Further improvements}
+The most valuable next improvements are:
+\begin{itemize}
+  \item adaptive state sampling driven by validation error;
+  \item state-dependent MC path allocation;
+  \item shape-constrained splines or Bernstein fits where monotonicity,
+        convexity, or bounds are known;
+  \item adaptive sparse Chebyshev basis selection;
+  \item product-aware LR mixture components;
+  \item outer-scenario weighted validation for PFE;
+  \item neural-network benchmarks for genuinely high-dimensional products.
+\end{itemize}
 
 \chapter{Financial Background}
 
