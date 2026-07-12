@@ -62,12 +62,13 @@
 \chapter*{Reader's Guide}
 This document is written as a second-year undergraduate text. It assumes calculus, linear algebra, basic probability, and a willingness to read a few stochastic-process formulas. The goal is not to hide the implementation behind jargon. The goal is to explain the finance problem, motivate the proxy solution, show the diagnostic graphs, and then derive the mathematics carefully enough that another researcher can improve the method.
 
-The first five body chapters are intentionally practical:
+The first six body chapters are intentionally practical:
 \begin{itemize}
   \item Motivation: why repeated pricing creates a computational problem.
   \item Solution: how the proxy workflow solves the problem.
   \item Graphs: how to read the value and error diagnostics.
   \item Examples: how the state choice changes by product.
+  \item Feature engineering: how to turn financial state into useful proxy inputs.
   \item Method selection: why each proxy method exists and when it should win.
 \end{itemize}
 
@@ -356,6 +357,205 @@ At one state, asset 1 may be most likely to be worst. At a nearby state, asset 2
 \end{example}
 
 This is why basket cliquet was harder than European or Asian options. The proxy must handle not only level and volatility but also cross-sectional ranking behavior.
+
+\chapter{Feature Engineering for Proxy Pricing}
+
+\section{Why feature engineering matters}
+For proxy pricing, feature engineering is often more important than the choice
+between PCHIP, Chebyshev, Akima, or a neural network. A fitting method can only
+learn a function of the inputs it receives. If the input omits a state variable
+that changes the future payoff distribution, then the approximation error is
+structural. More paths and a more powerful regressor cannot fully repair it.
+
+The guiding principle is:
+\[
+  \text{first make the state financially sufficient, then make it numerically easy.}
+\]
+A financially sufficient state contains the information needed to price future
+cash flows. A numerically easy feature vector rescales and reshapes that state
+so that the fitted proxy sees a smoother function.
+
+\section{State variables versus features}
+It is useful to separate two concepts:
+\begin{itemize}
+  \item the \emph{state} is the information needed for pricing;
+  \item the \emph{feature vector} is the numerical representation given to the
+        fitting method.
+\end{itemize}
+For a European option under GBM, the state can be \(S_t\), but the feature can
+be \(d_1\). For an Asian option, the state can be \((S_t,A_t)\), but the
+feature can be adjusted moneyness \(K_{\rm adj}/S_t\). For a basket Asian, the
+state contains all spots and the running basket sum, but the feature vector may
+contain basket level, running-sum cushion, PCA scores, and a moment baseline.
+
+\section{Feature engineering workflow}
+The recommended workflow is:
+\begin{enumerate}
+  \item Write the payoff and observation schedule.
+  \item Identify the Markov or pricing-sufficient state.
+  \item Add discrete status variables such as alive, called, knocked out, or
+        exercise date.
+  \item Find exact regions and bounds before fitting.
+  \item Build dimensionless coordinates such as moneyness, log-moneyness,
+        \(d_1\), accrued cushion, or normalized variance.
+  \item Add baselines, moments, and residual targets when the raw value is too
+        curved.
+  \item Add cross-sectional features for baskets: level, dispersion, PCA, best,
+        worst, and spread indicators.
+  \item Validate feature sufficiency by plotting residuals against omitted
+        candidate variables.
+\end{enumerate}
+
+\section{Common feature types}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.26\linewidth}>{\raggedright\arraybackslash}p{0.31\linewidth}>{\raggedright\arraybackslash}p{0.35\linewidth}@{}}
+\toprule
+Feature type & Examples & Rationale\\
+\midrule
+Level & \(S/K\), basket level, forward moneyness & Captures the main price direction.\\
+Log level & \(\log(S/K)\), log spot vector & GBM evolves additively in log space.\\
+Greek-inspired & \(d_1\), delta bucket, vega scale & Places grid resolution where option sensitivity changes.\\
+Path state & running sum, accrued coupon, realized average & Restores sufficiency for path-dependent payoffs.\\
+Status flag & alive, called, knocked out, exercise date & Separates states with different payoff rules.\\
+Bound/cushion & distance to floor, cap, barrier, strike & Makes exact regions and transition regions visible.\\
+Moment baseline & conditional mean, variance, lognormal baseline & Removes the dominant smooth component before fitting.\\
+Cross-sectional & basket level, dispersion, best, worst, spread & Captures basket composition and ranking effects.\\
+Dimension reduction & PCA scores, common factor, residual factors & Avoids full tensor grids in high dimension.\\
+Model state & variance \(v_t\), local-vol bucket, rate state & Includes variables that affect future dynamics.\\
+\bottomrule
+\end{longtable}
+
+\section{One-feature examples}
+\subsection{European option}
+Raw spot is a valid state, but \(d_1\) is usually a better feature:
+\[
+  d_1=
+  \frac{\log(S/K)+(r-q+\tfrac12\sigma^2)\tau}{\sigma\sqrt{\tau}}.
+\]
+The reason is not cosmetic. The Black-Scholes call delta is tied to
+\(\Phi(d_1)\), so equal spacing in \(d_1\) gives more balanced coverage across
+delta regions than equal spacing in spot.
+
+\subsection{Asian option}
+For an arithmetic Asian call with running sum \(A\), current fixing \(S\), and
+\(m\) future fixings, the adjusted strike is
+\[
+  K_{\rm adj}=\frac{NK-A-S}{m}.
+\]
+The important feature is not \(S\) alone. It is the adjusted moneyness
+\[
+  \frac{K_{\rm adj}}{S}.
+\]
+This feature combines today's spot and the running sum into the object that
+the remaining future average must beat.
+
+\subsection{Barrier option}
+For a barrier option, distance to the barrier is more informative than raw
+spot:
+\[
+  b_{\rm dist}=\log(S/L)
+\]
+for a lower barrier \(L\). The state also needs the alive flag. Without the
+alive flag, two paths with the same spot can have different values.
+
+\subsection{American and Bermudan options}
+For early-exercise products, the feature should expose both moneyness and time
+to remaining exercise opportunities. A continuation proxy can use spot or
+log-moneyness, but the exercise rule must impose
+\[
+  V=\max(\text{intrinsic},\text{continuation})
+\]
+after fitting. A feature that hides the exercise boundary tends to create
+oscillatory errors.
+
+\section{Basket and high-dimensional examples}
+\subsection{Basket Asian}
+A basket Asian needs more than basket level. Two states can have the same
+basket value but different composition. Useful features include:
+\begin{itemize}
+  \item current basket level;
+  \item running basket sum or remaining average cushion;
+  \item weighted log spots;
+  \item cross-sectional dispersion;
+  \item PCA scores of centered log spots;
+  \item conditional mean and variance of the future basket average;
+  \item lognormal moment baseline and fitted residual.
+\end{itemize}
+The moment baseline handles much of the smooth level effect. PCA and
+dispersion features explain composition effects that a scalar basket level
+cannot see.
+
+\subsection{Basket cliquet}
+Basket cliquets need features that describe ranking and dispersion, not only
+level. For a worst-of or best-of coupon, the identity of the best or worst
+asset can switch. Useful features include:
+\begin{itemize}
+  \item accrued coupon and remaining floor/cap cushion;
+  \item basket return level;
+  \item minimum and maximum recent return indicators;
+  \item cross-sectional spread;
+  \item PCA scores for log spots and log variances;
+  \item variance state for each underlying;
+  \item local-volatility or SLV state summaries.
+\end{itemize}
+If the switching surface is too sharp, a fitted smooth proxy may need a cached
+Sobol/LR safety layer in that region.
+
+\section{Feature transforms and target transforms}
+Feature engineering is linked to target engineering. Some examples:
+\begin{itemize}
+  \item Use \(\log(V+\epsilon)\) for positive prices with wide dynamic range.
+  \item Use a bounded logit target for known floor/cap products.
+  \item Use \(\log((V+\epsilon)/(B+\epsilon))\) when a baseline \(B\) captures
+        most of the shape.
+  \item Use signed or additive residuals when the baseline can be close to
+        zero.
+\end{itemize}
+The feature and target should be chosen together. A good feature can make the
+target nearly linear or nearly flat; a poor feature can make even a flexible
+regressor work too hard.
+
+\section{How to detect missing features}
+After fitting, do not only look at the overall error table. Plot signed errors
+against candidate omitted variables. Warning signs include:
+\begin{itemize}
+  \item residuals that trend with running sum after using spot only;
+  \item residuals that trend with distance to barrier;
+  \item basket residuals that trend with dispersion or worst-minus-best spread;
+  \item cliquet residuals that trend with accrued floor/cap cushion;
+  \item SLV residuals that trend with variance after using spot only.
+\end{itemize}
+If residuals have structure against an omitted variable, the problem is
+probably feature engineering, not interpolation.
+
+\section{Feature selection without becoming ad hoc}
+The feature set should be product-aware but not arbitrary. A defensible feature
+usually comes from one of four sources:
+\begin{enumerate}
+  \item state sufficiency: the variable is needed by the payoff or dynamics;
+  \item asymptotics: the variable controls a known tail, bound, or exact region;
+  \item moment approximation: the variable enters conditional mean, variance, or
+        a baseline;
+  \item validation residuals: independent errors show a stable pattern against
+        the variable.
+\end{enumerate}
+This keeps the methodology generic. It allows product-specific features, but
+requires each feature to have a mathematical, financial, or empirical reason.
+
+\section{Practical feature checklist}
+Before training a proxy, check:
+\begin{itemize}
+  \item Does the state determine future payoff distribution under the model?
+  \item Are all path-dependent running quantities included?
+  \item Are barrier, call, exercise, and knock-out statuses included?
+  \item Are features dimensionless and scaled to comparable ranges?
+  \item Are known exact regions removed or encoded?
+  \item Is there a baseline that can explain the main level effect?
+  \item For baskets, are level, dispersion, and ranking effects represented?
+  \item For SLV, are spot and variance both represented?
+  \item Do residual plots show structure against omitted variables?
+  \item Does the feature design still work across parameter cases, not only one
+        hand-picked option?
+\end{itemize}
 
 \chapter{Method Motivation and Selection}
 

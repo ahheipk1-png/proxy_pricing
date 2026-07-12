@@ -152,6 +152,16 @@ Markdown/MethodStudy/findings/method_motivation_and_selection.md
 It explains why each fitting method exists, when it should beat another method,
 and which further improvements are worth trying next.
 
+The feature-engineering guide is:
+
+```text
+Markdown/MethodStudy/findings/feature_engineering_guide.md
+```
+
+It explains how to choose pricing states and proxy features for European,
+Asian, barrier, American, cliquet, basket Asian, basket cliquet, and SLV-style
+products.
+
 `AutocallableMain.py` runs a single-underlying autocallable proxy grid with
 five payoff/market cases and four observation dates.
 
@@ -263,7 +273,7 @@ output/pdf/proxy_pricing_methodology.pdf
 ```
 
 The guide is written as a LaTeX textbook for a second-year undergraduate with
-calculus, probability, and linear algebra. Its 73 physical pages start with
+calculus, probability, and linear algebra. Its 80 physical pages start with
 motivation, solution overview, diagnostic graphs, and guided examples before
 moving into the technical chapters. It includes:
 
@@ -271,6 +281,7 @@ moving into the technical chapters. It includes:
 risk-system motivation and the repeated-pricing problem
 solution workflow graph and representative value/error diagnostic plots
 guided examples for European, Asian, barrier, American, cliquet, and basket products
+feature-engineering framework for states, coordinates, baskets, residual diagnostics, and checklists
 method motivation and selection rationale for local, spline, spectral, and high-dimensional proxies
 GPU acceleration rationale for MC labels, benchmarks, high-dimensional training, and Sobol caveats
 risk-neutral valuation, state sufficiency, and error decomposition
