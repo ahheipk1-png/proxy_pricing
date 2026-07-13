@@ -19,19 +19,21 @@ changing code or rerunning heavy experiments.
 1. `README.md`
 2. `European/findings/european_option_proxy_findings.md`
 3. `European/findings/european_vol_rate_proxy.md`
-4. `MethodStudy/findings/one_dimensional_fitting_findings.md`
-5. `MethodStudy/findings/expanded_spline_study.md`
-6. `MethodStudy/findings/feature_engineering_guide.md`
-7. `MethodStudy/findings/method_motivation_and_selection.md`
-8. `Asian/findings/asian_option_proxy_findings.md`
-9. `American/findings/american_option_proxy_findings.md`
-10. `Barrier/findings/barrier_proxy_findings.md`
-11. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
-12. `MethodStudy/results/current_performance_matrix.md`
-13. `MethodStudy/results/correctness_tests.md`
-14. `MethodStudy/results/timing_performance_summary.md`
-15. `MethodStudy/results/expanded_coverage_summary.md`
-16. Product result summaries under `*/results/summary.md`
+4. `European/findings/european_term_structure_proxy.md`
+5. `MethodStudy/findings/one_dimensional_fitting_findings.md`
+6. `MethodStudy/findings/expanded_spline_study.md`
+7. `MethodStudy/findings/feature_engineering_guide.md`
+8. `MethodStudy/findings/term_structure_feature_notes.md`
+9. `MethodStudy/findings/method_motivation_and_selection.md`
+10. `Asian/findings/asian_option_proxy_findings.md`
+11. `American/findings/american_option_proxy_findings.md`
+12. `Barrier/findings/barrier_proxy_findings.md`
+13. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
+14. `MethodStudy/results/current_performance_matrix.md`
+15. `MethodStudy/results/correctness_tests.md`
+16. `MethodStudy/results/timing_performance_summary.md`
+17. `MethodStudy/results/expanded_coverage_summary.md`
+18. Product result summaries under `*/results/summary.md`
 
 ## Important Current Decisions
 
@@ -40,6 +42,10 @@ changing code or rerunning heavy experiments.
 - Use `MethodStudy/findings/feature_engineering_guide.md` before changing
   state variables or adding high-dimensional features; feature sufficiency is
   usually more important than the fitting method.
+- Use `MethodStudy/findings/term_structure_feature_notes.md` before adding
+  rate or volatility term-structure features. For Europeans, collapse
+  deterministic curves to integrated rate and variance; for path-dependent
+  products, use event-date summaries before raw curve knots.
 - Use `MethodStudy/findings/method_motivation_and_selection.md` before adding
   new fitting methods; it explains why each method exists and when one should
   beat another.

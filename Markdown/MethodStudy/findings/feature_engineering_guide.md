@@ -243,8 +243,17 @@ Before training:
 - Is there a useful baseline?
 - For baskets, are level, dispersion, and ranking effects represented?
 - For SLV, are spot and variance both represented?
+- For rate/volatility term structures, have curves been compressed into
+  product-relevant integrals or event-date summaries before using raw knots?
 - Do residual plots show structure against omitted variables?
 - Does the feature design survive multiple parameter cases?
+
+For deterministic European term structures, integrated rate and integrated
+variance are sufficient. For path-dependent products, use event-date summaries
+such as discount factors, forward distances, cumulative variances, local barrier
+segment variance, or front/back curve slopes before adding every curve bucket as
+a separate feature. See `term_structure_feature_notes.md` for the product-by-
+product rule.
 
 ## Current View
 
@@ -257,4 +266,3 @@ state sufficiency -> financial coordinates -> variance-reduced labels -> fitting
 For one-feature products, a good coordinate often makes PCHIP or Akima enough.
 For higher-dimensional products, good features, baselines, PCA, and exact
 regions usually matter more than increasing polynomial degree.
-

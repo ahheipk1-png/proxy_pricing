@@ -299,3 +299,37 @@ adding more polynomial degree. The `(d1, vol, rate)` coordinate stayed stable,
 while raw spot or log-moneyness coordinates were much worse over the same wide
 vol/rate box. Chebyshev-spaced training states were also important; uniform
 training nodes made the higher-degree Chebyshev fits unstable.
+
+## Rate And Volatility Term Structures
+
+A separate standalone script, `EuroMain_vol_rate.py`, tests deterministic
+four-bucket rate and volatility term structures while keeping the original
+`EuroMain.py` unchanged. The detailed result is documented in
+`Markdown/European/findings/european_term_structure_proxy.md`.
+
+For a European option, deterministic curve shape is redundant once we know:
+
+```text
+integrated rate, integrated dividend yield, integrated variance
+```
+
+The best tested feature vector was:
+
+```text
+(d1, average rate, effective volatility)
+```
+
+where effective volatility is the square root of average variance. Using raw
+rate and volatility curve knots made the sparse Chebyshev fit worse because it
+added unnecessary dimensions.
+
+With shifted Sobol MC labels, the best collapsed proxy achieved:
+
+| Option | Max % Error | P99 % Error | Avg % Error |
+|---|---:|---:|---:|
+| call | 0.535% | 0.498% | 0.170% |
+| put | 0.565% | 0.495% | 0.160% |
+
+The shape-invariance check compared upward and downward curves with the same
+average rate and integrated variance. The generalized Black-Scholes values were
+identical up to displayed floating-point precision.
