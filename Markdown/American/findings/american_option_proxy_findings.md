@@ -84,3 +84,31 @@ Akima is viable, but PCHIP is more accurate and stable around the exercise
 boundary because its monotonicity-preserving slopes suppress local overshoot.
 The remaining discrepancy includes the difference between 100-date MC exercise
 and the near-continuous finite-difference benchmark.
+
+## Rate And Volatility Term Structures
+
+American values depend on when rates and volatility arrive because the exercise
+boundary is a time-dependent free boundary. In the term-structure sensitivity
+study, front-loaded versus back-loaded curves with the same total rate and
+total variance changed the American put value by about 6%.
+
+For a fixed deterministic curve, the proxy at each exercise time can still be a
+one-dimensional function of spot. The backward recursion should use
+step-specific quantities:
+
+```text
+df_i = exp(- integral r(u) du over the step)
+drift_i = integral [r(u)-q(u)-0.5 sigma(u)^2] du over the step
+variance_i = integral sigma(u)^2 du over the step
+```
+
+If the proxy must generalize across curves, add curve summaries rather than
+raw curve knots:
+
+```text
+remaining average rate
+remaining effective volatility
+near-step variance
+front/back volatility slope
+forward-moneyness or discounted-strike coordinate
+```

@@ -19,3 +19,18 @@ allowed every 24 tree steps.
 | high_vol | 100.00 | 0.360 | 0.045 | 0.015 |
 | deep_itm | 115.00 | 0.240 | 0.045 | 0.015 |
 | dividend_rich | 100.00 | 0.280 | 0.045 | 0.060 |
+
+## Rate And Volatility Term Structures
+
+Bermudan exercise values depend on the timing of rates and volatility, not only
+their final integrals. In the single-feature term-structure sensitivity study,
+front-loaded versus back-loaded curves with the same total rate and total
+variance changed the Bermudan put value by about 5.9%.
+
+For a fixed deterministic curve, keep the proxy one-dimensional in spot at each
+exercise date, but use step-specific discount factors, drifts, and variances in
+the backward recursion.
+
+If the proxy must generalize across different curves, add remaining curve
+summaries such as average rate, effective volatility, near-step variance, and
+front/back volatility slope before trying raw curve knots.

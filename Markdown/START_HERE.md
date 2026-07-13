@@ -24,16 +24,17 @@ changing code or rerunning heavy experiments.
 6. `MethodStudy/findings/expanded_spline_study.md`
 7. `MethodStudy/findings/feature_engineering_guide.md`
 8. `MethodStudy/findings/term_structure_feature_notes.md`
-9. `MethodStudy/findings/method_motivation_and_selection.md`
-10. `Asian/findings/asian_option_proxy_findings.md`
-11. `American/findings/american_option_proxy_findings.md`
-12. `Barrier/findings/barrier_proxy_findings.md`
-13. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
-14. `MethodStudy/results/current_performance_matrix.md`
-15. `MethodStudy/results/correctness_tests.md`
-16. `MethodStudy/results/timing_performance_summary.md`
-17. `MethodStudy/results/expanded_coverage_summary.md`
-18. Product result summaries under `*/results/summary.md`
+9. `MethodStudy/results/term_structure_single_feature_summary.md`
+10. `MethodStudy/findings/method_motivation_and_selection.md`
+11. `Asian/findings/asian_option_proxy_findings.md`
+12. `American/findings/american_option_proxy_findings.md`
+13. `Barrier/findings/barrier_proxy_findings.md`
+14. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
+15. `MethodStudy/results/current_performance_matrix.md`
+16. `MethodStudy/results/correctness_tests.md`
+17. `MethodStudy/results/timing_performance_summary.md`
+18. `MethodStudy/results/expanded_coverage_summary.md`
+19. Product result summaries under `*/results/summary.md`
 
 ## Important Current Decisions
 

@@ -162,6 +162,16 @@ It explains how to choose pricing states and proxy features for European,
 Asian, barrier, American, cliquet, basket Asian, basket cliquet, and SLV-style
 products.
 
+The companion term-structure guide is:
+
+```text
+Markdown/MethodStudy/findings/term_structure_feature_notes.md
+```
+
+It explains when deterministic rate/volatility curves can be collapsed to
+integrated quantities and when path-dependent products need event-date or
+local-variance summaries.
+
 `AutocallableMain.py` runs a single-underlying autocallable proxy grid with
 five payoff/market cases and four observation dates.
 

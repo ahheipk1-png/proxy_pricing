@@ -13,6 +13,33 @@ do not add raw curve knots unless the payoff actually needs the curve shape
 Raw curve knots increase dimension quickly. If the product only depends on a
 few integrals or event-date summaries, those summaries are better features.
 
+## Numerical Shape-Sensitivity Check
+
+`SingleFeatureTermStructureStudy.py` tests pairs of deterministic curves with
+the same total rate integral and the same total variance integral. Only the
+timing of rates and volatility changes.
+
+The result is:
+
+| Product | Worst shape sensitivity | Interpretation |
+|---|---:|---|
+| European call | 0.000% | terminal-only, curve shape collapses |
+| Random terminal payoff | 0.001% | terminal-only; residual is MC noise |
+| Asian arithmetic call | 51.074% | fixing-date distribution strongly depends on curve timing |
+| Bermudan put | 5.922% | exercise value depends on when variance arrives |
+| American put | 6.067% | early-exercise boundary depends on rate/vol timing |
+| Barrier down-out call | 1.077% | local segment variance affects survival |
+| Autocallable note | 2.577% | observation-date probabilities and discounting depend on curve timing |
+
+The practical conclusion is:
+
+```text
+terminal payoff: collapse to integrated R and V
+path/event payoff: use event-date summaries
+barrier payoff: include local segment variance
+early exercise: use step-specific discount/drift/variance in the recursion
+```
+
 ## European Options
 
 For a European option under deterministic rates, dividend yield, and volatility,
@@ -166,6 +193,28 @@ far-date average
 slope
 curvature
 ```
+
+## Cliquet And Reset-Return Products
+
+Cliquet payoffs observe returns over reset periods. A deterministic volatility
+term structure matters through each reset period variance, not just final
+integrated variance.
+
+For fixed curves, the reset-date proxy can stay low-dimensional if the reset
+period parameters are part of the model configuration. Across changing curves,
+use summaries aligned to reset periods:
+
+```text
+discount factor to maturity
+forward growth per reset period
+variance per reset period
+remaining average reset variance
+front/back reset variance slope
+accrued floor/cap cushion
+```
+
+Do not use only terminal effective volatility for cliquets; it loses the timing
+information that determines which local caps and floors bind.
 
 ## Practical Decision Rule
 

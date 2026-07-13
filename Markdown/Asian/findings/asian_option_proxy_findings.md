@@ -138,6 +138,32 @@ The worst errors are small boundary ripples where values are low but not
 negligible. With the current benchmark, the monthly 12-fixing test stays inside
 the 3-5% target range.
 
+## Rate And Volatility Term Structures
+
+Asian options observe intermediate fixing dates, so deterministic volatility
+and rate curve shape cannot generally be collapsed to final integrated
+variance. In the term-structure sensitivity study, front-loaded versus
+back-loaded curves with the same total rate and total variance changed the
+quarterly arithmetic Asian call value by up to about 51%.
+
+For a fixed market curve, the current adjusted-moneyness proxy can remain a
+one-dimensional curve at each fixing date. The curve enters the simulator,
+discounting, expected future fixing sum, and geometric control variate.
+
+If the proxy must work across changing curves, add low-dimensional event-date
+features before raw curve knots:
+
+```text
+remaining average rate
+discount factor to maturity
+expected forward growth sum for remaining fixings
+effective variance of the average/geometric control variate
+front/back volatility slope over remaining fixing dates
+```
+
+Raw rate and volatility buckets should be a fallback only if these summaries
+leave residual structure.
+
 ## Default Entry Point
 
 The standalone parent-level script is:

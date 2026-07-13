@@ -136,6 +136,28 @@ The Halton/boundary state grid was competitive but did not beat the deterministi
 boundary-enriched grid. For this product, putting points near the right transition
 regions mattered more than using a low-discrepancy sequence.
 
+## Rate And Volatility Term Structures
+
+Cliquet payoffs observe returns over reset periods, so deterministic volatility
+curve timing matters through each reset-period variance. Terminal effective
+volatility alone is not enough if the curve varies across trades.
+
+For a fixed curve, the reset-date proxy can remain effectively one-dimensional
+in the expected-total return coordinate. If the proxy must generalize across
+curves, add reset-aligned summaries:
+
+```text
+discount factor to maturity
+forward growth per reset period
+variance per reset period
+remaining average reset variance
+front/back reset variance slope
+accrued floor/cap cushion
+```
+
+Raw curve knots should be used only after reset-period summaries fail residual
+tests.
+
 ## Default Entry Point
 
 The standalone parent-level script is:

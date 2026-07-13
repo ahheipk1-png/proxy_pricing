@@ -75,6 +75,35 @@ volatility, and maturity. PCHIP remained close to natural cubic interpolation
 on accuracy while avoiding local overshoot, so it remains the production
 default.
 
+## Rate And Volatility Term Structures
+
+Barrier options are sensitive to the timing of volatility because barrier
+survival is built from segment crossing probabilities. In the term-structure
+sensitivity study, front-loaded versus back-loaded curves with the same total
+variance changed the down-and-out call value by about 1.1%.
+
+For fixed deterministic curves, the proxy can remain a one-dimensional spot
+curve at each monitoring date, but the simulator and Brownian-bridge correction
+must use per-segment drift and variance:
+
+```text
+drift_i = integral [r(u)-q(u)-0.5 sigma(u)^2] du
+variance_i = integral sigma(u)^2 du
+```
+
+If the proxy must generalize across curves, useful features are:
+
+```text
+log distance to the nearest barrier
+local variance over the next monitoring segment
+remaining cumulative variance
+remaining average rate
+front/back volatility slope
+```
+
+For continuous monitoring, the local next-segment variance is usually more
+important than the far-end curve shape.
+
 ## Limitations
 
 - The bridge formulas are exact for constant-parameter GBM segments. Under
