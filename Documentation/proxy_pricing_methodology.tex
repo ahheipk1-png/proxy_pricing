@@ -358,6 +358,169 @@ At one state, asset 1 may be most likely to be worst. At a nearby state, asset 2
 
 This is why basket cliquet was harder than European or Asian options. The proxy must handle not only level and volatility but also cross-sectional ranking behavior.
 
+\chapter{Generic Exotic Product Pipeline}
+
+\section{Motivation}
+The product-specific scripts are useful because each instrument has its own
+best feature map. The generic exotic experiment asks a different question: can
+many payoff families be represented by one data-driven algebra and then tested
+with the same proxy workflow? The answer is yes for a broad class of
+single-feature stress tests.
+
+The generic pipeline is:
+\[
+  \text{Underlying}
+  \longrightarrow
+  \text{Observation}
+  \longrightarrow
+  \text{Performance}
+  \longrightarrow
+  \text{Ranking}
+  \longrightarrow
+  \text{Transformation}
+  \longrightarrow
+  \text{Aggregation}
+  \longrightarrow
+  \text{Payoff}.
+\]
+This is not meant to replace the specialized European, Asian, American, or
+basket Asian proxies. It is a common language for building and testing many
+exotic payoff definitions without writing a new pricing class for each one.
+
+\section{Algebraic contract form}
+Let there be \(d\) underlyings observed on dates
+\[
+  0=t_0<t_1<\cdots<t_M=T.
+\]
+For asset \(i\) and coupon or observation block \(m\), define an observation
+functional
+\[
+  O_m^{(i)}
+  =
+  G_m^{(i)}
+  \left(
+    S_{t_0}^{(i)},S_{t_1}^{(i)},\ldots,S_{t_M}^{(i)}
+  \right).
+\]
+Examples include spot, arithmetic average, tail average, minimum, maximum, and
+lookback average. The local performance is then a dimensionless or strike-based
+quantity such as
+\[
+  P_m^{(i)}=\frac{O_m^{(i)}}{K_i}-1,
+  \qquad
+  P_m^{(i)}=O_m^{(i)}-K_i,
+  \qquad
+  P_m^{(i)}=\frac{S_T^{(i)}}{S_0^{(i)}}-1.
+\]
+A ranking map converts the asset vector
+\[
+  P_m=\left(P_m^{(1)},\ldots,P_m^{(d)}\right)
+\]
+to one scalar. The tested ranking maps are weighted basket,
+\[
+  R_m=\sum_{i=1}^d w_i P_m^{(i)},
+\]
+and order statistic,
+\[
+  R_m=P_{m,(r)},
+\]
+where \(r=1\) means best-of after sorting from high to low and \(r=d\) means
+worst-of.
+
+Floors and caps are applied by the clamp
+\[
+  C_{F,U}(x)=\min(U,\max(F,x)),
+\]
+with the missing-floor or missing-cap cases obtained by dropping the
+corresponding operation. If there are several periods, an aggregation map
+\(\mathcal A\) combines the clamped period returns:
+\[
+  R
+  =
+  \mathcal A\left(C_{F,U}(R_1),\ldots,C_{F,U}(R_M)\right).
+\]
+The examples use sum, average, compounded return, maximum, and minimum. The
+terminal payoff is finally
+\[
+  H=\Pi(R),
+\]
+where \(\Pi\) may be linear, positive-part, cash digital, asset digital, range
+digital, or a clamped-linear redemption.
+
+\section{Supported templates}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.34\linewidth}>{\raggedright\arraybackslash}p{0.36\linewidth}@{}}
+\toprule
+Template & Main construction & Important proxy difficulty\\
+\midrule
+Rainbow & Observe each asset, transform local performance, then combine by basket or order statistic. & Smooth unless ranking switches dominate.\\
+Himalayan & Repeat coupon periods and optionally remove weak names from later baskets. & Dynamic basket membership.\\
+Yield seeker & Map observation-date performance to high, low, actual, or memory coupons. & Coupon discontinuities near trigger levels.\\
+Lookback & Use minimum, maximum, average, or trimmed path levels. & Kinks near zero-value lookback boundaries.\\
+Barrier & Monitor a ranked or basket performance against upper or lower barriers. & Alive status and crossing probability.\\
+Binary & Pay cash, asset, gap, double-digital, or range-digital amounts. & Digital transition regions are steep.\\
+\bottomrule
+\end{longtable}
+
+\section{Generic one-feature proxy}
+The generic tests deliberately use one common scale feature. For a scale
+\(s>0\), the initial basket state is
+\[
+  S_0^{(i)}(s)=sS_0^{(i)}.
+\]
+For each product configuration, the training label is
+\[
+  V(s_j)
+  =
+  e^{-rT}\frac1N\sum_{n=1}^N
+  H\!\left(S^{(n)}(s_j)\right),
+\]
+where \(S^{(n)}(s_j)\) is a Sobol-antithetic GBM path generated from the scaled
+initial state. The fitted coordinate is \(x_j=\log s_j\). Four one-dimensional
+candidates are tested:
+\[
+  V(x),\qquad
+  \log(V(x)+\varepsilon),
+\]
+each fitted by either linear interpolation or PCHIP. Predictions are selected
+by validation max error first and p99 error second. This choice was important:
+for a near-zero lookback boundary, PCHIP had the better p99, but plain linear
+interpolation had the better worst point.
+
+\section{Single and basket test results}
+The single-underlying generic run priced \(106\) configurations with
+\(65{,}536\) Sobol-antithetic paths per label and \(101\) shifted validation
+states. All cases passed the project threshold. The worst max relative error
+was \(9.410\%\), and the all-case average p99 error was \(0.430\%\).
+
+The basket generic run priced \(120\) balanced configurations across four
+underlyings. It used the same path count and validation count. There were no
+review cases; \(116\) configurations passed and \(4\) were watch cases. The
+worst max relative error was \(10.933\%\), and the all-case average p99 error
+was \(0.587\%\).
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.28\linewidth}@{}}
+\toprule
+Study & Cases & Worst max & Avg p99 & Main weak region\\
+\midrule
+Single generic exotic & \(106\) & \(9.410\%\) & \(0.430\%\) & arithmetic-average binary transitions\\
+Basket generic exotic & \(120\) & \(10.933\%\) & \(0.587\%\) & basket binary trigger transitions\\
+\bottomrule
+\end{longtable}
+
+\section{What the generic test teaches}
+The generic pipeline is a good engineering abstraction for payoff evaluation
+and broad proxy testing. It also shows where one scalar is not enough. Smooth
+payoffs such as rainbow baskets, Himalayan-style clamped coupons, and many
+yield-seeker coupons were easy. The difficult cases were digital and lookback
+boundaries, where the price changes rapidly over a narrow scale interval.
+
+For a production proxy, the same product algebra can still be used, but the
+feature map should be upgraded when residual diagnostics show structure. A
+basket binary may need distance-to-trigger and dispersion features. A barrier
+may need distance-to-barrier and local variance. A path-dependent payoff may
+need running sums or event-date summaries. The pipeline tells us what the
+contract is; feature engineering tells us what the proxy needs to see.
+
 \chapter{Feature Engineering for Proxy Pricing}
 
 \section{Why feature engineering matters}
@@ -1580,6 +1743,28 @@ For every instrument, the implementation follows this structure.
   \item Report values, signed errors, absolute errors, relative errors with a floor, and benchmark standard errors when available.
 \end{enumerate}
 
+\section{Generic exotic pipeline algorithm}
+The generic exotic scripts follow the same idea, but the payoff itself is
+assembled from data fields rather than a hand-written pricing class.
+\begin{enumerate}
+  \item Choose the product template and fill the observation, performance,
+        ranking, transformation, aggregation, and payoff specifications.
+  \item Simulate common Sobol-antithetic GBM path ratios
+        \(S_t^{(i)}/S_0^{(i)}\).
+  \item For each common scale \(s_j\), build
+        \(S_0^{(i)}(s_j)=s_jS_0^{(i)}\) and reuse the path ratios.
+  \item Evaluate the observation map \(G\), local performance \(P\), ranking
+        \(R\), clamp \(C_{F,U}\), aggregation \(\mathcal A\), and payoff
+        \(\Pi\) path by path.
+  \item Discount and average the payoff to obtain the label \(V(s_j)\).
+  \item Fit direct/log linear and direct/log PCHIP candidates in
+        \(x_j=\log s_j\).
+  \item Select the candidate with the smallest validation max error, breaking
+        ties by p99 error and then mean absolute error.
+  \item Summarize accuracy by family so that digital, barrier, and lookback
+        failures cannot be hidden by easy smooth payoffs.
+\end{enumerate}
+
 \section{European algorithm}
 \begin{enumerate}
   \item Fix \(\tau=T-t\).
@@ -1665,7 +1850,92 @@ The timing report separates:
 \end{itemize}
 The reduced-budget smoke accuracy columns in the timing report are diagnostic only. The product-specific markdown summaries remain the full-budget accuracy source.
 
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.26\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.32\linewidth}@{}}
+\toprule
+Recent generic study & Worst max error & Avg p99 error & Comment\\
+\midrule
+Single generic exotic & \(9.410\%\) & \(0.430\%\) & \(106\) configurations, all pass.\\
+Basket generic exotic & \(10.933\%\) & \(0.587\%\) & \(120\) configurations, no review cases.\\
+\bottomrule
+\end{longtable}
+
 \appendix
+
+\chapter{Line-by-Line Proofs: Generic Product Pipeline}
+
+\section{Composed payoff is a valid random variable}
+\begin{proofsteps}
+\item For each asset \(i\), the simulated path
+\[
+  \left(S_{t_0}^{(i)},\ldots,S_{t_M}^{(i)}\right)
+\]
+is a random vector on the Monte Carlo probability space.
+\item Observation maps such as spot, arithmetic average, maximum, minimum, and
+tail average are Borel-measurable functions of this finite vector.
+\item Therefore each observation \(O_m^{(i)}\) is a random variable.
+\item The performance maps
+\[
+  x\mapsto x/K_i-1,\qquad x\mapsto x-K_i,\qquad x\mapsto x/S_0^{(i)}-1
+\]
+are continuous functions, so \(P_m^{(i)}\) is a random variable.
+\item Weighted sums and order statistics are Borel-measurable functions of the
+finite vector \(P_m\), so the ranked value \(R_m\) is a random variable.
+\item The clamp \(C_{F,U}(x)=\min(U,\max(F,x))\) is continuous, so the clamped
+period value is a random variable.
+\item Sum, average, compounded product, maximum, and minimum are measurable
+finite-dimensional maps. Hence the aggregate \(R\) is a random variable.
+\item The final payoff maps used in the code are continuous except for digital
+indicators, and digital indicators are still Borel-measurable.
+\item Therefore \(H=\Pi(R)\) is a valid random variable.
+\item If \(\E[|H|]<\infty\), the discounted price
+\[
+  V_0=e^{-rT}\E_{\Q}[H]
+\]
+is well-defined.
+\end{proofsteps}
+
+\section{Why common path ratios can be reused across scales}
+\begin{proofsteps}
+\item Under risk-neutral GBM,
+\[
+  S_t^{(i)}
+  =
+  S_0^{(i)}
+  \exp\!\left(
+    (r-q_i-\tfrac12\sigma_i^2)t+\sigma_i W_t^{(i)}
+  \right).
+\]
+\item Define the path ratio
+\[
+  R_t^{(i)}
+  =
+  \frac{S_t^{(i)}}{S_0^{(i)}}
+  =
+  \exp\!\left(
+    (r-q_i-\tfrac12\sigma_i^2)t+\sigma_i W_t^{(i)}
+  \right).
+\]
+\item This ratio does not depend on the initial spot level.
+\item If the initial state is scaled to
+\[
+  \widetilde S_0^{(i)}=sS_0^{(i)},
+\]
+then the corresponding path is
+\[
+  \widetilde S_t^{(i)}
+  =
+  \widetilde S_0^{(i)}R_t^{(i)}
+  =
+  sS_0^{(i)}R_t^{(i)}
+  =
+  sS_t^{(i)}.
+\]
+\item Therefore the same simulated ratio path \(R_t^{(i)}\) can be reused for
+all common scale nodes \(s\).
+\item This reuse is a common-random-number design. It lowers noise when
+comparing neighboring labels, but it does not change the conditional mean at
+any fixed scale.
+\end{proofsteps}
 
 \chapter{Line-by-Line Proofs: Conditional Pricing and State Choice}
 

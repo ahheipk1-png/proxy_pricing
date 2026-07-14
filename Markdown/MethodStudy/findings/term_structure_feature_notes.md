@@ -21,6 +21,10 @@ timing of rates and volatility changes.
 
 The result is:
 
+These percentages are value sensitivities to deterministic curve timing, not
+proxy accuracy errors. The proxy-accuracy numbers live in the option-specific
+validation summaries.
+
 | Product | Worst shape sensitivity | Interpretation |
 |---|---:|---|
 | European call | 0.000% | terminal-only, curve shape collapses |

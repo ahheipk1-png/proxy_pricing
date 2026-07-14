@@ -30,11 +30,13 @@ changing code or rerunning heavy experiments.
 12. `American/findings/american_option_proxy_findings.md`
 13. `Barrier/findings/barrier_proxy_findings.md`
 14. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
-15. `MethodStudy/results/current_performance_matrix.md`
-16. `MethodStudy/results/correctness_tests.md`
-17. `MethodStudy/results/timing_performance_summary.md`
-18. `MethodStudy/results/expanded_coverage_summary.md`
-19. Product result summaries under `*/results/summary.md`
+15. `SingleExotic/results/summary.md`
+16. `BasketExotic/results/summary.md`
+17. `MethodStudy/results/current_performance_matrix.md`
+18. `MethodStudy/results/correctness_tests.md`
+19. `MethodStudy/results/timing_performance_summary.md`
+20. `MethodStudy/results/expanded_coverage_summary.md`
+21. Product result summaries under `*/results/summary.md`
 
 ## Important Current Decisions
 
@@ -59,6 +61,9 @@ changing code or rerunning heavy experiments.
 - For single-feature American, Bermudan, Asian, and barrier studies, prefer
   shape-preserving interpolation over high-degree monomials because it avoids
   artificial oscillation near exercise, barrier, and low-value regions.
+- The generic exotic pipeline is implemented in `ExoticPipelineCore.py`.
+  `SingleExoticMain.py` and `BasketExoticMain.py` run the single-underlying
+  and basket versions without replacing the older product-specific scripts.
 - Basket cliquet is not solved by a fitted-only proxy in all cases. The current
   hard-case fallback is a cached Sobol/LR safety proxy.
 - New option-type folders should follow the existing layout:

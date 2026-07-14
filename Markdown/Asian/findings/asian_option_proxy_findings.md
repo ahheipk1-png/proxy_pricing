@@ -146,6 +146,11 @@ variance. In the term-structure sensitivity study, front-loaded versus
 back-loaded curves with the same total rate and total variance changed the
 quarterly arithmetic Asian call value by up to about 51%.
 
+That 51% figure is not a proxy-accuracy error; it is the product value change
+under two deliberately different curve shapes. The default Asian proxy
+validation result is much smaller: worst max error 2.454% and average p99
+error 1.141%.
+
 For a fixed market curve, the current adjusted-moneyness proxy can remain a
 one-dimensional curve at each fixing date. The curve enters the simulator,
 discounting, expected future fixing sum, and geometric control variate.

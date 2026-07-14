@@ -6,6 +6,10 @@ be collapsed for the other single-underlying proxy products.
 Each scenario pair has the same total rate integral and the same total
 variance integral. Only the timing of rates and volatility changes.
 
+Important: these percentages are value sensitivities to changing the
+curve shape. They are not proxy errors. Proxy accuracy is reported in
+the option-specific validation summaries.
+
 ## Curves
 
 - flat rate: `[0.04, 0.04, 0.04, 0.04]`
@@ -68,7 +72,8 @@ and autocallable values changed when volatility or rates were moved earlier
 or later in time. For these products, keeping a one-dimensional spot proxy
 is reasonable only when the curve is fixed as part of the model
 configuration. If the curve varies across trades or scenarios, add
-event-date summaries rather than raw curve knots.
+event-date summaries rather than raw curve knots. This is a feature
+engineering conclusion, not a measured proxy-accuracy result.
 
 Practical rule:
 

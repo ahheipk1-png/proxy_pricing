@@ -17,6 +17,8 @@ python AmericanMain.py
 python BarrierMain.py
 python BasketAsianMain.py
 python BasketCliquetMain.py
+python SingleExoticMain.py
+python BasketExoticMain.py
 python AutocallableMain.py
 python BermudanMain.py
 python RandomOptionMain.py
@@ -137,6 +139,20 @@ bring `basket_return` to 6.448% worst max error and `average_clipped` to
 month 3/6/9 spot check against 262,144-path benchmarks, the hard-case worst max
 errors were 3.0% to 11.2%.
 
+`SingleExoticMain.py` and `BasketExoticMain.py` run the generic data-driven
+payoff pipeline:
+
+```text
+Underlying -> Observation -> Performance -> Ranking -> Transformation -> Aggregation -> Payoff
+```
+
+The single-underlying run covers 106 configurations and the basket run covers
+120 configurations across rainbow, Himalayan, yield seeker, lookback, barrier,
+and binary-style payoffs. The proxy candidates are direct/log linear and
+direct/log PCHIP interpolation over a common spot-scale feature, with the
+validation winner selected by max error first and p99 second. Current worst max
+errors are 9.410% for the single run and 10.933% for the basket run.
+
 `OneDimensionalFitExperiment/ExpandedSplineStudy.py` compares 17 spline,
 local, spectral, rational, and kernel methods across 99 European, American,
 Asian, and barrier cases. PCHIP remains the generic one-feature default because
@@ -193,6 +209,8 @@ AmericanOptExperiment/
 BarrierOptExperiment/
 BasketAsianOptExperiment/
 BasketCliquetOptExperiment/
+SingleExoticOptExperiment/
+BasketExoticOptExperiment/
 OneDimensionalFitExperiment/
 ```
 
@@ -207,6 +225,8 @@ Markdown/Cliquet/
 Markdown/SLVCliquet/
 Markdown/BasketAsian/
 Markdown/BasketCliquet/
+Markdown/SingleExotic/
+Markdown/BasketExotic/
 Markdown/Autocallable/
 Markdown/Bermudan/
 Markdown/RandomOption/

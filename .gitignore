@@ -3,6 +3,8 @@ __pycache__/
 tmp/
 tools/tectonic/
 OneDimensionalFitExperiment/results/quick/
+SingleExoticOptExperiment/results/
+BasketExoticOptExperiment/results/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
