@@ -475,35 +475,42 @@ For each product configuration, the training label is
   H\!\left(S^{(n)}(s_j)\right),
 \]
 where \(S^{(n)}(s_j)\) is a Sobol-antithetic GBM path generated from the scaled
-initial state. The fitted coordinate is \(x_j=\log s_j\). Four one-dimensional
-candidates are tested:
+initial state. The fitted coordinate is \(x_j=\log s_j\). The one-dimensional
+candidate set includes direct, log, and bounded-logit targets:
 \[
   V(x),\qquad
-  \log(V(x)+\varepsilon),
+  \log(V(x)+\varepsilon),\qquad
+  \log\!\left(\frac{V(x)/U}{1-V(x)/U}\right),
 \]
-each fitted by either linear interpolation or PCHIP. Predictions are selected
-by validation max error first and p99 error second. This choice was important:
-for a near-zero lookback boundary, PCHIP had the better p99, but plain linear
-interpolation had the better worst point.
+each fitted by linear interpolation or PCHIP, plus a nearest-neighbor candidate
+for empirical step labels. Predictions are selected by validation max error
+first and p99 error second. This choice was important: for a near-zero lookback
+boundary, PCHIP had the better p99, but plain linear interpolation had the
+better worst point.
 
-\section{Single and basket test results}
-The single-underlying generic run priced \(106\) configurations with
-\(65{,}536\) Sobol-antithetic paths per label and \(101\) shifted validation
-states. All cases passed the project threshold. The worst max relative error
-was \(9.410\%\), and the all-case average p99 error was \(0.430\%\).
+\section{Family-level test results}
+The aggregate single/basket scripts are now smoke tests. The preferred generic
+pipeline evidence is the family-level split: Rainbow, Yield Seeker, Himalayan,
+Lookback, Barrier, and Binary. Each family-level script prices \(100\)
+single-underlying configurations and \(100\) four-underlying basket
+configurations, with subtypes spread across observation rules, rankings,
+clamps, schedules, triggers, and payoff styles.
 
-The basket generic run priced \(120\) balanced configurations across four
-underlyings. It used the same path count and validation count. There were no
-review cases; \(116\) configurations passed and \(4\) were watch cases. The
-worst max relative error was \(10.933\%\), and the all-case average p99 error
-was \(0.587\%\).
+Barrier and Binary use larger path budgets because cash-barrier and digital
+payoffs create steep empirical transition regions. Lookback, Barrier, and
+Binary also use extra training nodes around common strike, trigger, and barrier
+transition scales.
 
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.28\linewidth}@{}}
 \toprule
-Study & Cases & Worst max & Avg p99 & Main weak region\\
+Family & Cases & Worst max & Avg p99 & Main note\\
 \midrule
-Single generic exotic & \(106\) & \(9.410\%\) & \(0.430\%\) & arithmetic-average binary transitions\\
-Basket generic exotic & \(120\) & \(10.933\%\) & \(0.587\%\) & basket binary trigger transitions\\
+Rainbow & \(200\) & \(0.322\%\) & \(0.074\%\) & smooth transformed basket/ranking payoffs\\
+Yield Seeker & \(200\) & \(0.071\%\) & \(0.010\%\) & coupon maps are smooth in the scale feature\\
+Himalayan & \(200\) & \(0.641\%\) & \(0.123\%\) & dynamic basket and period aggregation covered\\
+Lookback & \(200\) & \(2.434\%\) & \(0.064\%\) & transition-enriched grid near lookback strikes\\
+Barrier & \(200\) & \(5.864\%\) & \(1.201\%\) & cash barrier transitions need \(32{,}768\) paths\\
+Binary & \(200\) & \(7.270\%\) & \(1.668\%\) & range and double digitals need \(131{,}072\) paths\\
 \bottomrule
 \end{longtable}
 
@@ -1757,7 +1764,7 @@ assembled from data fields rather than a hand-written pricing class.
         \(R\), clamp \(C_{F,U}\), aggregation \(\mathcal A\), and payoff
         \(\Pi\) path by path.
   \item Discount and average the payoff to obtain the label \(V(s_j)\).
-  \item Fit direct/log linear and direct/log PCHIP candidates in
+  \item Fit direct, log, bounded-logit, PCHIP, and nearest candidates in
         \(x_j=\log s_j\).
   \item Select the candidate with the smallest validation max error, breaking
         ties by p99 error and then mean absolute error.
@@ -1850,12 +1857,16 @@ The timing report separates:
 \end{itemize}
 The reduced-budget smoke accuracy columns in the timing report are diagnostic only. The product-specific markdown summaries remain the full-budget accuracy source.
 
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.26\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.32\linewidth}@{}}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedleft\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.36\linewidth}@{}}
 \toprule
-Recent generic study & Worst max error & Avg p99 error & Comment\\
+Family-level generic study & Worst max error & Avg p99 error & Comment\\
 \midrule
-Single generic exotic & \(9.410\%\) & \(0.430\%\) & \(106\) configurations, all pass.\\
-Basket generic exotic & \(10.933\%\) & \(0.587\%\) & \(120\) configurations, no review cases.\\
+Rainbow & \(0.322\%\) & \(0.074\%\) & \(100\) single plus \(100\) basket configurations.\\
+Yield Seeker & \(0.071\%\) & \(0.010\%\) & Smooth coupon map family.\\
+Himalayan & \(0.641\%\) & \(0.123\%\) & Dynamic basket membership covered.\\
+Lookback & \(2.434\%\) & \(0.064\%\) & Transition-enriched strike grid.\\
+Barrier & \(5.864\%\) & \(1.201\%\) & Uses \(32{,}768\) path ratios for cash barrier transitions.\\
+Binary & \(7.270\%\) & \(1.668\%\) & Uses \(131{,}072\) path ratios for digital transitions.\\
 \bottomrule
 \end{longtable}
 

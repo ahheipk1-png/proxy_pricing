@@ -5,6 +5,12 @@ tools/tectonic/
 OneDimensionalFitExperiment/results/quick/
 SingleExoticOptExperiment/results/
 BasketExoticOptExperiment/results/
+RainbowOptExperiment/results/
+YieldSeekerOptExperiment/results/
+HimalayanOptExperiment/results/
+LookbackOptExperiment/results/
+BinaryOptExperiment/results/
+BarrierFamilyOptExperiment/results/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

@@ -19,6 +19,12 @@ python BasketAsianMain.py
 python BasketCliquetMain.py
 python SingleExoticMain.py
 python BasketExoticMain.py
+python RainbowMain.py
+python YieldSeekerMain.py
+python HimalayanMain.py
+python LookbackMain.py
+python BarrierFamilyMain.py
+python BinaryMain.py
 python AutocallableMain.py
 python BermudanMain.py
 python RandomOptionMain.py
@@ -153,6 +159,24 @@ direct/log PCHIP interpolation over a common spot-scale feature, with the
 validation winner selected by max error first and p99 second. Current worst max
 errors are 9.410% for the single run and 10.933% for the basket run.
 
+The family-level generic scripts are the preferred reports for the requested
+exotic payoff pipeline split:
+
+```text
+RainbowMain.py
+YieldSeekerMain.py
+HimalayanMain.py
+LookbackMain.py
+BarrierFamilyMain.py
+BinaryMain.py
+```
+
+Each family-level script runs 100 single-underlying configurations and 100
+basket configurations. Current worst max errors are 0.322% for Rainbow,
+0.071% for YieldSeeker, 0.641% for Himalayan, 2.434% for Lookback, 5.864% for
+Barrier, and 7.270% for Binary. Binary and Barrier use larger path budgets
+because digital trigger and barrier-cash transition regions are noisier.
+
 `OneDimensionalFitExperiment/ExpandedSplineStudy.py` compares 17 spline,
 local, spectral, rational, and kernel methods across 99 European, American,
 Asian, and barrier cases. PCHIP remains the generic one-feature default because
@@ -211,6 +235,12 @@ BasketAsianOptExperiment/
 BasketCliquetOptExperiment/
 SingleExoticOptExperiment/
 BasketExoticOptExperiment/
+RainbowOptExperiment/
+YieldSeekerOptExperiment/
+HimalayanOptExperiment/
+LookbackOptExperiment/
+BarrierFamilyOptExperiment/
+BinaryOptExperiment/
 OneDimensionalFitExperiment/
 ```
 
@@ -227,6 +257,11 @@ Markdown/BasketAsian/
 Markdown/BasketCliquet/
 Markdown/SingleExotic/
 Markdown/BasketExotic/
+Markdown/Rainbow/
+Markdown/YieldSeeker/
+Markdown/Himalayan/
+Markdown/Lookback/
+Markdown/Binary/
 Markdown/Autocallable/
 Markdown/Bermudan/
 Markdown/RandomOption/
@@ -244,6 +279,12 @@ AmericanOptExperiment/default_run/american_default_results.csv
 BarrierOptExperiment/results/barrier_proxy_method_results.csv
 BasketAsianOptExperiment/results/basket_asian_proxy_method_results.csv
 BasketCliquetOptExperiment/results/basket_slv_cliquet_proxy_method_results.csv
+RainbowOptExperiment/results/rainbow_family_proxy_cases.csv
+YieldSeekerOptExperiment/results/yieldseeker_family_proxy_cases.csv
+HimalayanOptExperiment/results/himalayan_family_proxy_cases.csv
+LookbackOptExperiment/results/lookback_family_proxy_cases.csv
+BarrierFamilyOptExperiment/results/barrier_family_proxy_cases.csv
+BinaryOptExperiment/results/binary_family_proxy_cases.csv
 AutocallableOptExperiment/results/autocallable_proxy_method_results.csv
 BermudanOptExperiment/results/bermudan_proxy_method_results.csv
 RandomOptionOptExperiment/results/random_option_proxy_method_results.csv

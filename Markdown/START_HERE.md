@@ -32,11 +32,17 @@ changing code or rerunning heavy experiments.
 14. `BasketCliquet/findings/basket_slv_cliquet_findings.md`
 15. `SingleExotic/results/summary.md`
 16. `BasketExotic/results/summary.md`
-17. `MethodStudy/results/current_performance_matrix.md`
-18. `MethodStudy/results/correctness_tests.md`
-19. `MethodStudy/results/timing_performance_summary.md`
-20. `MethodStudy/results/expanded_coverage_summary.md`
-21. Product result summaries under `*/results/summary.md`
+17. `Rainbow/results/summary.md`
+18. `YieldSeeker/results/summary.md`
+19. `Himalayan/results/summary.md`
+20. `Lookback/results/summary.md`
+21. `Barrier/generic_family_results/summary.md`
+22. `Binary/results/summary.md`
+23. `MethodStudy/results/current_performance_matrix.md`
+24. `MethodStudy/results/correctness_tests.md`
+25. `MethodStudy/results/timing_performance_summary.md`
+26. `MethodStudy/results/expanded_coverage_summary.md`
+27. Product result summaries under `*/results/summary.md`
 
 ## Important Current Decisions
 
@@ -64,6 +70,10 @@ changing code or rerunning heavy experiments.
 - The generic exotic pipeline is implemented in `ExoticPipelineCore.py`.
   `SingleExoticMain.py` and `BasketExoticMain.py` run the single-underlying
   and basket versions without replacing the older product-specific scripts.
+- The family-level generic exotic scripts are the preferred coverage reports:
+  `RainbowMain.py`, `YieldSeekerMain.py`, `HimalayanMain.py`,
+  `LookbackMain.py`, `BarrierFamilyMain.py`, and `BinaryMain.py`. Each runs
+  100 single-underlying and 100 basket configurations.
 - Basket cliquet is not solved by a fitted-only proxy in all cases. The current
   hard-case fallback is a cached Sobol/LR safety proxy.
 - New option-type folders should follow the existing layout:

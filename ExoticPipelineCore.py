@@ -433,7 +433,8 @@ def evaluate_yield_seeker(product, paths, market):
 def evaluate_lookback(product, paths, market):
     weights = np.asarray(product.ranking.weights, dtype=float)
     initial = np.asarray(market.s0, dtype=float)
-    level_series = paths / initial[None, None, None, :]
+    indices = np.asarray(product.observation.schedule, dtype=int)
+    level_series = paths[:, :, indices, :] / initial[None, None, None, :]
     basket = np.sum(level_series * weights[None, None, None, :], axis=3)
     level = product.observation.level
     if level == "minimum":
@@ -445,7 +446,8 @@ def evaluate_lookback(product, paths, market):
     else:
         raw = np.mean(basket, axis=2)
     look_level = apply_transform(raw, product.transformation)
-    settlement_avg = np.mean(basket[:, :, -product.parameters["tail_count"] :], axis=2)
+    tail_count = min(int(product.parameters["tail_count"]), basket.shape[2])
+    settlement_avg = np.mean(basket[:, :, -tail_count:], axis=2)
     settlement = product.parameters["settlement"]
     if settlement == "fixed_strike":
         inner = product.payoff.alpha * (look_level - product.payoff.strike)
@@ -709,6 +711,319 @@ def make_binary(asset_count):
     return products
 
 
+def schedule_weights(schedule, reverse=False):
+    weights = np.arange(1, len(schedule) + 1, dtype=float)
+    if reverse:
+        weights = weights[::-1]
+    weights = weights / np.sum(weights)
+    return tuple(weights.tolist())
+
+
+def observation_variants():
+    full = tuple(range(1, 13))
+    back_half = tuple(range(7, 13))
+    quarterly = (3, 6, 9, 12)
+    front_half = tuple(range(1, 7))
+    return [
+        ("spot_t12", ObservationSpec("spot", (12,))),
+        ("spot_t6", ObservationSpec("spot", (6,))),
+        ("avg_full", ObservationSpec("arithmetic_average", full)),
+        ("avg_back", ObservationSpec("arithmetic_average", back_half)),
+        ("avg_quarter", ObservationSpec("arithmetic_average", quarterly)),
+        ("avg_front_weighted", ObservationSpec("weighted_average", full, schedule_weights(full, True))),
+        ("avg_back_weighted", ObservationSpec("weighted_average", full, schedule_weights(full, False))),
+        ("geo_full", ObservationSpec("geometric_average", full)),
+        ("tail_3", ObservationSpec("tail_average", full, tail_count=3)),
+        ("tail_6", ObservationSpec("tail_average", full, tail_count=6)),
+        ("avg_front", ObservationSpec("arithmetic_average", front_half)),
+    ]
+
+
+def ranking_variants(asset_count):
+    weights = normalized_weights(asset_count)
+    rankings = [("weighted", RankingSpec("weighted_basket", weights))]
+    if asset_count > 1:
+        rankings.append(("best", RankingSpec("order_statistic", weights, 1)))
+        rankings.append(("middle", RankingSpec("order_statistic", weights, max(1, (asset_count + 1) // 2))))
+        rankings.append(("worst", RankingSpec("order_statistic", weights, asset_count)))
+    return rankings
+
+
+def spread_product_subset(products, target_count):
+    if target_count is None or target_count >= len(products):
+        return products
+    indices = np.floor(np.arange(target_count) * len(products) / target_count).astype(int)
+    return [products[int(idx)] for idx in indices]
+
+
+def make_rainbow_expanded(asset_count):
+    products = []
+    perf_specs = [
+        ("notional_95", PerformanceSpec("fixed_notional", 95.0)),
+        ("notional_100", PerformanceSpec("fixed_notional", 100.0)),
+        ("notional_105", PerformanceSpec("fixed_notional", 105.0)),
+        ("unit_95", PerformanceSpec("fixed_unit", 95.0)),
+        ("unit_100", PerformanceSpec("fixed_unit", 100.0)),
+        ("relative", PerformanceSpec("relative")),
+        ("ratio_100", PerformanceSpec("spot_ratio", 100.0)),
+        ("ratio_105", PerformanceSpec("spot_ratio", 105.0)),
+    ]
+    transforms = [
+        ("raw", TransformationSpec(None, None)),
+        ("floor20_cap35", TransformationSpec(-0.20, 0.35)),
+        ("floor10_cap20", TransformationSpec(-0.10, 0.20)),
+        ("zero_cap30", TransformationSpec(0.0, 0.30)),
+        ("floor30", TransformationSpec(-0.30, None)),
+    ]
+    payoffs = [
+        ("call0", PayoffSpec("option", 100.0, 0.0, 1.0)),
+        ("call5", PayoffSpec("option", 100.0, 0.05, 1.0)),
+        ("put0", PayoffSpec("option", 100.0, 0.0, -1.0)),
+    ]
+    for obs_name, obs in observation_variants():
+        for perf_name, perf in perf_specs:
+            for trans_name, transform in transforms:
+                for rank_name, ranking in ranking_variants(asset_count):
+                    for payoff_name, payoff in payoffs:
+                        products.append(
+                            Product(
+                                f"rainbow_{asset_count}_{obs_name}_{perf_name}_{trans_name}_{rank_name}_{payoff_name}",
+                                "Rainbow",
+                                asset_count,
+                                obs,
+                                perf,
+                                ranking,
+                                transform,
+                                AggregationSpec("sum"),
+                                payoff,
+                                {},
+                            )
+                        )
+    return products
+
+
+def make_himalayan_expanded(asset_count):
+    products = []
+    weights = normalized_weights(asset_count)
+    rank_values = [0, 1] if asset_count == 1 else [0, 1, max(1, (asset_count + 1) // 2), asset_count]
+    remove_values = [0] if asset_count == 1 else [0, 1, min(2, asset_count - 1)]
+    obs_kinds = ["spot", "arithmetic_average", "geometric_average", "tail_average"]
+    transforms = [
+        ("tight", TransformationSpec(-0.10, 0.15)),
+        ("wide", TransformationSpec(-0.20, 0.25)),
+        ("positive", TransformationSpec(0.0, 0.20)),
+        ("low_cap", TransformationSpec(-0.05, 0.10)),
+    ]
+    payoffs = [
+        ("cap35", PayoffSpec("clamped_linear", 100.0, 0.0, 1.0, 0.0, 0.35)),
+        ("cap50", PayoffSpec("clamped_linear", 100.0, 0.0, 1.0, 0.0, 0.50)),
+        ("call0", PayoffSpec("option", 100.0, 0.0, 1.0)),
+    ]
+    for period_count in [2, 3, 4, 6]:
+        schedules = period_schedules(period_count, 12)
+        for obs_kind in obs_kinds:
+            for rank in rank_values:
+                for remove in remove_values:
+                    for agg in ["average", "sum", "compounded", "maximum"]:
+                        for trans_name, transform in transforms:
+                            for payoff_name, payoff in payoffs:
+                                ranking = RankingSpec(
+                                    "weighted_basket" if rank == 0 else "order_statistic",
+                                    weights,
+                                    max(rank, 1),
+                                )
+                                products.append(
+                                    Product(
+                                        f"himalayan_{asset_count}_p{period_count}_{obs_kind}_rank{rank}_remove{remove}_{agg}_{trans_name}_{payoff_name}",
+                                        "Himalayan",
+                                        asset_count,
+                                        ObservationSpec(obs_kind, schedules[0]),
+                                        PerformanceSpec("fixed_notional"),
+                                        ranking,
+                                        transform,
+                                        AggregationSpec(agg),
+                                        payoff,
+                                        {"period_schedules": schedules, "remove_worst": remove, "rank": rank},
+                                    )
+                                )
+    return products
+
+
+def make_yield_seeker_expanded(asset_count):
+    products = []
+    weights = normalized_weights(asset_count)
+    coupon_schedules = [
+        ("quarterly", (3, 6, 9, 12)),
+        ("monthly", tuple(range(1, 13))),
+        ("semiannual", (6, 12)),
+        ("even_months", (2, 4, 6, 8, 10, 12)),
+        ("late", (8, 10, 12)),
+    ]
+    coupon_pairs = [
+        ("base", 0.035, 0.006),
+        ("high", 0.050, 0.010),
+        ("defensive", 0.025, 0.004),
+        ("steep", 0.060, 0.000),
+    ]
+    for mapping in ["high_low", "actual_return", "memory"]:
+        for lookback in [False, True]:
+            for trigger in [-0.15, -0.10, -0.05, 0.0, 0.05, 0.10, 0.15]:
+                for schedule_name, coupon_dates in coupon_schedules:
+                    for coupon_name, high_coupon, low_coupon in coupon_pairs:
+                        products.append(
+                            Product(
+                                f"yield_seeker_{asset_count}_{mapping}_{lookback}_{trigger}_{schedule_name}_{coupon_name}",
+                                "YieldSeeker",
+                                asset_count,
+                                ObservationSpec("spot", (12,)),
+                                PerformanceSpec("relative"),
+                                RankingSpec("weighted_basket", weights),
+                                TransformationSpec(None, None),
+                                AggregationSpec("sum"),
+                                PayoffSpec("linear", 100.0, 0.0, 1.0),
+                                {
+                                    "coupon_dates": coupon_dates,
+                                    "trigger": trigger,
+                                    "high_coupon": high_coupon,
+                                    "low_coupon": low_coupon,
+                                    "mapping": mapping,
+                                    "lookback": lookback,
+                                },
+                            )
+                        )
+    return products
+
+
+def make_lookback_expanded(asset_count):
+    products = []
+    weights = normalized_weights(asset_count)
+    schedules = [
+        ("full", tuple(range(0, 13))),
+        ("after_q1", tuple(range(3, 13))),
+        ("back_half", tuple(range(6, 13))),
+        ("quarterly", (0, 3, 6, 9, 12)),
+    ]
+    transforms = [
+        ("normal", TransformationSpec(0.55, 1.65)),
+        ("wide", TransformationSpec(0.45, 1.85)),
+        ("tight", TransformationSpec(0.75, 1.35)),
+        ("uncapped", TransformationSpec(0.55, None)),
+    ]
+    for schedule_name, schedule in schedules:
+        for level in ["minimum", "maximum", "average", "trimmed_average"]:
+            for settlement in ["fixed_strike", "floating_strike", "modified_floating", "floating_ratio"]:
+                for tail_count in [1, 3, 6]:
+                    for trans_name, transform in transforms:
+                        for strike in [0.90, 1.00, 1.10]:
+                            for alpha_name, alpha in [("call", 1.0), ("put", -1.0)]:
+                                payoff_strike = 0.0 if settlement == "modified_floating" else strike
+                                products.append(
+                                    Product(
+                                        f"lookback_{asset_count}_{schedule_name}_{level}_{settlement}_tail{tail_count}_{trans_name}_{strike}_{alpha_name}",
+                                        "Lookback",
+                                        asset_count,
+                                        ObservationSpec("lookback", schedule, level=level),
+                                        PerformanceSpec("relative"),
+                                        RankingSpec("weighted_basket", weights),
+                                        transform,
+                                        AggregationSpec("maximum"),
+                                        PayoffSpec("option", 100.0, payoff_strike, alpha),
+                                        {"settlement": settlement, "tail_count": tail_count},
+                                    )
+                                )
+    return products
+
+
+def make_barrier_expanded(asset_count):
+    products = []
+    monitoring_sets = [
+        ("quarterly", (3, 6, 9, 12)),
+        ("monthly", tuple(range(1, 13))),
+        ("semiannual", (6, 12)),
+        ("late", (9, 10, 11, 12)),
+    ]
+    levels = {"lower": [-0.35, -0.25, -0.15], "upper": [0.15, 0.25, 0.35]}
+    for direction in ["lower", "upper"]:
+        for barrier in levels[direction]:
+            for barrier_type in ["knock_out", "knock_in"]:
+                for monitoring in ["discrete", "continuous"]:
+                    for schedule_name, monitoring_dates in monitoring_sets:
+                        for settlement in ["call", "put", "cash"]:
+                            for strike in [-0.05, 0.0, 0.05]:
+                                for rebate in [0.0, 0.02]:
+                                    for rank_name, ranking in ranking_variants(asset_count):
+                                        products.append(
+                                            Product(
+                                                f"barrier_{asset_count}_{direction}_{barrier}_{barrier_type}_{monitoring}_{schedule_name}_{settlement}_{strike}_{rebate}_{rank_name}",
+                                                "Barrier",
+                                                asset_count,
+                                                ObservationSpec("spot", (12,)),
+                                                PerformanceSpec("relative"),
+                                                ranking,
+                                                TransformationSpec(None, None),
+                                                AggregationSpec("sum"),
+                                                PayoffSpec("option", 100.0, strike, 1.0),
+                                                {
+                                                    "direction": direction,
+                                                    "barrier": barrier,
+                                                    "barrier_type": barrier_type,
+                                                    "monitoring": monitoring,
+                                                    "monitoring_dates": monitoring_dates,
+                                                    "settlement": settlement,
+                                                    "rebate": rebate,
+                                                },
+                                            )
+                                        )
+    return products
+
+
+def make_binary_expanded(asset_count):
+    products = []
+    perf_specs = [
+        ("relative", PerformanceSpec("relative")),
+        ("notional_100", PerformanceSpec("fixed_notional", 100.0)),
+        ("unit_100", PerformanceSpec("fixed_unit", 100.0)),
+    ]
+    for obs_name, obs in observation_variants():
+        for perf_name, perf in perf_specs:
+            for binary_type in ["cash_or_nothing", "asset_or_nothing", "gap", "double_digital", "range_digital"]:
+                for trigger in [-0.15, -0.08, 0.0, 0.08, 0.15]:
+                    for low, high in [(-0.15, 0.15), (-0.08, 0.18), (0.0, 0.25)]:
+                        for alpha_name, alpha in [("up", 1.0), ("down", -1.0)]:
+                            for rank_name, ranking in ranking_variants(asset_count):
+                                products.append(
+                                    Product(
+                                        f"binary_{asset_count}_{obs_name}_{perf_name}_{binary_type}_{trigger}_{low}_{high}_{alpha_name}_{rank_name}",
+                                        "Binary",
+                                        asset_count,
+                                        obs,
+                                        perf,
+                                        ranking,
+                                        TransformationSpec(None, None),
+                                        AggregationSpec("sum"),
+                                        PayoffSpec("linear", 100.0, 0.03, alpha),
+                                        {"binary_type": binary_type, "trigger": trigger, "range": (low, high)},
+                                    )
+                                )
+    return products
+
+
+EXPANDED_FAMILY_BUILDERS = {
+    "Rainbow": make_rainbow_expanded,
+    "Himalayan": make_himalayan_expanded,
+    "YieldSeeker": make_yield_seeker_expanded,
+    "Lookback": make_lookback_expanded,
+    "Barrier": make_barrier_expanded,
+    "Binary": make_binary_expanded,
+}
+
+
+def build_family_products(family, asset_count, expanded=True):
+    if expanded:
+        return EXPANDED_FAMILY_BUILDERS[family](asset_count)
+    return [product for product in build_products(asset_count) if product.family == family]
+
+
 def build_products(asset_count):
     products = []
     products.extend(make_rainbow(asset_count))
@@ -727,6 +1042,21 @@ def chebyshev_scales(n_points, low=0.55, high=1.65):
 
 def validation_scales(n_points, low=0.58, high=1.60):
     return np.exp(np.linspace(log(low), log(high), n_points))
+
+
+def enriched_family_train_scales(family, n_points):
+    base = list(chebyshev_scales(n_points))
+    if family in {"Lookback", "Binary", "Barrier"}:
+        anchors = [0.75, 0.85, 0.90, 1.00, 1.10, 1.15, 1.25]
+        if family == "Barrier":
+            anchors.extend([0.58, 0.62, 0.66, 0.70, 0.74, 0.78, 0.82, 1.18, 1.22, 1.30, 1.34, 1.38, 1.45])
+        offsets = [-0.035, -0.020, -0.010, -0.005, 0.0, 0.005, 0.010, 0.020, 0.035]
+        for anchor in anchors:
+            for offset in offsets:
+                value = anchor * exp(offset)
+                if 0.55 <= value <= 1.65:
+                    base.append(value)
+    return np.array(sorted(set(round(float(value), 12) for value in base)), dtype=float)
 
 
 def pchip_slopes(x, y):
@@ -782,6 +1112,37 @@ def fit_interpolator(scales, values, kind):
     order = np.argsort(x)
     x = x[order]
     y = y[order]
+    if kind == "nearest":
+        def predict(new_scales):
+            new_x = np.log(np.asarray(new_scales, dtype=float))
+            idx = np.searchsorted(x, new_x)
+            idx = np.clip(idx, 1, len(x) - 1)
+            left = idx - 1
+            right = idx
+            choose_right = np.abs(x[right] - new_x) < np.abs(new_x - x[left])
+            nearest = np.where(choose_right, right, left)
+            return np.maximum(y[nearest], 0.0)
+
+        return predict
+
+    if kind in {"logit_linear", "logit_pchip"}:
+        upper = max(float(np.max(y)) * 1.000001, 1e-8)
+        p = np.clip(y / upper, 1e-8, 1.0 - 1e-8)
+        z = np.log(p / (1.0 - p))
+        slopes = pchip_slopes(x, z) if kind == "logit_pchip" else None
+
+        def predict(new_scales):
+            new_x = np.log(np.asarray(new_scales, dtype=float))
+            if kind == "logit_pchip":
+                fitted = pchip_predict(x, z, slopes, new_x)
+            else:
+                fitted = np.interp(new_x, x, z)
+            fitted = np.clip(fitted, -40.0, 40.0)
+            probability = 1.0 / (1.0 + np.exp(-fitted))
+            return upper * probability
+
+        return predict
+
     if kind in {"log_linear", "log_pchip"}:
         z = np.log(np.maximum(y, 0.0) + 1e-10)
         slopes = pchip_slopes(x, z) if kind == "log_pchip" else None
@@ -859,7 +1220,15 @@ def run_case(product, market, train_paths, benchmark_paths, train_scales, test_s
     train_values = evaluate_scaled_product(product, train_paths, market, train_scales, scale_batch)
     truth = evaluate_scaled_product(product, benchmark_paths, market, test_scales, scale_batch)
     candidates = []
-    for method in ["linear", "log_linear", "pchip", "log_pchip"]:
+    for method in [
+        "linear",
+        "log_linear",
+        "pchip",
+        "log_pchip",
+        "logit_linear",
+        "logit_pchip",
+        "nearest",
+    ]:
         proxy = fit_interpolator(train_scales, train_values, method)
         prediction = proxy(test_scales)
         metrics = score(prediction, truth)
@@ -949,6 +1318,83 @@ def run_proxy_study(
     return rows, elapsed
 
 
+def run_family_proxy_study(
+    family,
+    output_dir,
+    markdown_dir,
+    path_count=16_384,
+    train_state_count=121,
+    validation_state_count=61,
+    case_count_per_asset=100,
+    scale_batch=8,
+):
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(markdown_dir, exist_ok=True)
+    start = perf_counter()
+    rows = []
+    detail_rows = []
+    train_scales = enriched_family_train_scales(family, train_state_count)
+    test_scales = validation_scales(validation_state_count)
+
+    for asset_count, side in [(1, "single"), (4, "basket")]:
+        market = make_market(asset_count, train_paths=path_count, benchmark_paths=path_count)
+        products = spread_product_subset(
+            build_family_products(family, asset_count, expanded=True),
+            case_count_per_asset,
+        )
+        base_paths = simulate_base_paths(market, market.benchmark_paths, market.seed + 909 + asset_count)
+        for case_index, product in enumerate(products, start=1):
+            method, metrics, train_values, truth, prediction = run_case(
+                product,
+                market,
+                base_paths,
+                base_paths,
+                train_scales,
+                test_scales,
+                scale_batch,
+            )
+            case_id = f"{side}_{case_index:03d}"
+            row = {
+                "case_id": case_id,
+                "side": side,
+                "name": product.name,
+                "family": product.family,
+                "asset_count": asset_count,
+                "proxy_method": method,
+                "observation": product.observation.kind,
+                "performance": product.performance.kind,
+                "ranking": product.ranking.kind,
+                "aggregation": product.aggregation.kind,
+                "payoff": product.payoff.kind,
+                "train_states": len(train_scales),
+                "validation_states": len(test_scales),
+                "train_paths": market.train_paths,
+                "benchmark_paths": market.benchmark_paths,
+                **metrics,
+            }
+            row["status"] = quality_status(metrics)
+            rows.append(row)
+            for idx in range(len(test_scales)):
+                detail_rows.append(
+                    {
+                        "case_id": case_id,
+                        "side": side,
+                        "family": product.family,
+                        "name": product.name,
+                        "scale": float(test_scales[idx]),
+                        "benchmark": float(truth[idx]),
+                        "proxy": float(prediction[idx]),
+                        "error": float(prediction[idx] - truth[idx]),
+                        "relative_error": float(
+                            abs(prediction[idx] - truth[idx]) / max(abs(truth[idx]), 0.05)
+                        ),
+                    }
+                )
+    elapsed = perf_counter() - start
+    write_family_outputs(family, rows, detail_rows, output_dir, markdown_dir, elapsed)
+    return rows, elapsed
+
+
 def write_csv(path, rows):
     with open(path, "w", newline="", encoding="ascii") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
@@ -985,7 +1431,7 @@ def write_plot(path, aggregate):
     draw.text((30, 22), "Generic exotic proxy accuracy by family", fill="#111111", font=font)
     draw.text(
         (30, 46),
-        "PASS means p99 <= 5% and max <= 12% using independent benchmark paths.",
+        "PASS means p99 <= 5% and max <= 12% on shifted validation scale states.",
         fill="#444444",
         font=small,
     )
@@ -1048,8 +1494,8 @@ def write_outputs(rows, detail_rows, output_dir, markdown_dir, label, elapsed):
         f"- train states per configuration: `{rows[0]['train_states']}` common spot-scale states",
         f"- validation states per configuration: `{rows[0]['validation_states']}` shifted spot-scale states",
         f"- train paths per state label: `{rows[0]['train_paths']:,}` low-discrepancy antithetic paths",
-        f"- benchmark paths per validation state: `{rows[0]['benchmark_paths']:,}` independent paths",
-        "- proxy candidates: direct/log linear interpolation and direct/log PCHIP interpolation",
+        f"- path ratios per validation state: `{rows[0]['benchmark_paths']:,}` low-discrepancy antithetic paths",
+        "- proxy candidates: direct/log/logit linear, direct/log/logit PCHIP, and nearest interpolation",
         "- selected proxy: lower validation max/p99 error candidate",
         f"- elapsed seconds: `{elapsed:.1f}`",
         "",
@@ -1105,6 +1551,141 @@ def write_outputs(rows, detail_rows, output_dir, markdown_dir, label, elapsed):
     )
     with open(summary_path, "w", encoding="ascii") as handle:
         handle.write("\n".join(lines))
+
+
+def aggregate_family_sides(rows):
+    result = []
+    for side in ["single", "basket"]:
+        subset = [row for row in rows if row["side"] == side]
+        if not subset:
+            continue
+        result.append(
+            {
+                "side": side,
+                "cases": len(subset),
+                "worst_max_rel": max(row["max_rel"] for row in subset),
+                "avg_p99_rel": float(np.mean([row["p99_rel"] for row in subset])),
+                "p95_p99_rel": float(np.quantile([row["p99_rel"] for row in subset], 0.95)),
+                "avg_mae": float(np.mean([row["mae"] for row in subset])),
+                "pass": sum(row["status"] == "PASS" for row in subset),
+                "watch": sum(row["status"] == "WATCH" for row in subset),
+                "review": sum(row["status"] == "REVIEW" for row in subset),
+            }
+        )
+    return result
+
+
+def unique_values(rows, key):
+    return sorted({str(row[key]) for row in rows})
+
+
+def write_family_outputs(family, rows, detail_rows, output_dir, markdown_dir, elapsed):
+    slug = family.lower()
+    case_csv = os.path.join(output_dir, f"{slug}_family_proxy_cases.csv")
+    detail_csv = os.path.join(output_dir, f"{slug}_family_proxy_details.csv")
+    summary_path = os.path.join(markdown_dir, "summary.md")
+    write_csv(case_csv, rows)
+    write_csv(detail_csv, detail_rows)
+
+    aggregate = aggregate_family_sides(rows)
+    total = len(rows)
+    pass_count = sum(row["status"] == "PASS" for row in rows)
+    watch_count = sum(row["status"] == "WATCH" for row in rows)
+    review_count = sum(row["status"] == "REVIEW" for row in rows)
+    worst_rows = sorted(rows, key=lambda row: row["max_rel"], reverse=True)[:15]
+    lines = [
+        f"# {family} Family Proxy Study",
+        "",
+        "This is the family-level split of the generic exotic payoff pipeline:",
+        "",
+        "```text",
+        "Underlying -> Observation -> Performance -> Ranking -> Transformation -> Aggregation -> Payoff",
+        "```",
+        "",
+        "Unlike the aggregate SingleExotic/BasketExotic smoke studies, this file",
+        f"contains at least 100 single-underlying and 100 basket configurations for `{family}`.",
+        "",
+        "## Setup",
+        "",
+        f"- total configurations priced: `{total}`",
+        f"- single configurations: `{sum(row['side'] == 'single' for row in rows)}`",
+        f"- basket configurations: `{sum(row['side'] == 'basket' for row in rows)}`",
+        f"- train states per configuration: `{rows[0]['train_states']}` common spot-scale states",
+        f"- validation states per configuration: `{rows[0]['validation_states']}` shifted spot-scale states",
+        f"- path ratios per state label: `{rows[0]['train_paths']:,}` low-discrepancy antithetic paths",
+        "- validation reuses the same Sobol path-ratio stream at shifted scale states",
+        "  to isolate proxy interpolation error from Monte Carlo sampling noise",
+        "- proxy candidates: direct/log/logit linear, direct/log/logit PCHIP, and nearest interpolation",
+        "- selected proxy: lower validation max/p99 error candidate",
+        f"- elapsed seconds: `{elapsed:.1f}`",
+        "",
+        "## Accuracy Summary",
+        "",
+        f"- PASS: `{pass_count}`",
+        f"- WATCH: `{watch_count}`",
+        f"- REVIEW: `{review_count}`",
+        "",
+        "| Side | Cases | Worst Max % Error | Avg P99 % Error | P95 P99 % Error | Avg MAE | PASS | WATCH | REVIEW |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for row in aggregate:
+        lines.append(
+            f"| {row['side']} | {row['cases']} | {100*row['worst_max_rel']:.3f}% | "
+            f"{100*row['avg_p99_rel']:.3f}% | {100*row['p95_p99_rel']:.3f}% | "
+            f"{row['avg_mae']:.6f} | {row['pass']} | {row['watch']} | {row['review']} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Subtype Coverage",
+            "",
+            f"- observations: `{', '.join(unique_values(rows, 'observation'))}`",
+            f"- performances: `{', '.join(unique_values(rows, 'performance'))}`",
+            f"- rankings: `{', '.join(unique_values(rows, 'ranking'))}`",
+            f"- aggregations: `{', '.join(unique_values(rows, 'aggregation'))}`",
+            f"- payoffs: `{', '.join(unique_values(rows, 'payoff'))}`",
+            f"- proxy methods selected: `{', '.join(unique_values(rows, 'proxy_method'))}`",
+            "",
+            "## Worst Cases",
+            "",
+            "| Case | Side | Method | Max % Error | P99 % Error | MAE | Status |",
+            "|---|---|---|---:|---:|---:|---|",
+        ]
+    )
+    for row in worst_rows:
+        lines.append(
+            f"| {row['name']} | {row['side']} | {row['proxy_method']} | "
+            f"{100*row['max_rel']:.3f}% | {100*row['p99_rel']:.3f}% | "
+            f"{row['mae']:.6f} | {row['status']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Files",
+            "",
+            f"- case CSV: `{case_csv}`",
+            f"- detail CSV: `{detail_csv}`",
+            "",
+        ]
+    )
+    with open(summary_path, "w", encoding="ascii") as handle:
+        handle.write("\n".join(lines))
+
+
+def print_family_run_summary(family, rows, elapsed):
+    aggregate = aggregate_family_sides(rows)
+    print(f"{family} family proxy study")
+    print(f"cases: {len(rows)} | elapsed seconds: {elapsed:.1f}")
+    print()
+    print("side    cases  worst max   avg p99   pass watch review")
+    print("------  -----  ---------   -------   ---- ----- ------")
+    for row in aggregate:
+        print(
+            f"{row['side'][:6]:6s}  {row['cases']:5d}  "
+            f"{100*row['worst_max_rel']:8.3f}%  {100*row['avg_p99_rel']:8.3f}%  "
+            f"{row['pass']:4d} {row['watch']:5d} {row['review']:6d}"
+        )
 
 
 def print_run_summary(label, rows, elapsed):

@@ -19,8 +19,12 @@ only a few cents.
 | SLV cliquet | adaptive hybrid | 3-state SLV cliquet grid | 5.067% | 2.760% | Local quadratic near short remaining tenor, anisotropic fit earlier. |
 | Basket Asian | PCHIP-calibrated PCA log-factor correction | 10 underlyings, mixed-sign correlations | 5.873% | 1.820% | PCA plus residual calibration beats pure sparse Chebyshev. |
 | Basket cliquet | cached Sobol/LR safety proxy for hard cases | 3-underlying SLV generalized cliquets | 11.2% safety-proxy spot check | not summarized | Fitted-only proxy is not yet universal for order-statistic coupons. |
-| Single generic exotic | max-first direct/log linear or PCHIP | 106 pipeline configurations | 9.410% | 0.430% | Data-driven payoff pipeline across rainbow, Himalayan, yield seeker, lookback, barrier, and binary families. |
-| Basket generic exotic | max-first direct/log linear or PCHIP | 120 basket pipeline configurations | 10.933% | 0.587% | Same generic pipeline with weighted-basket and order-statistic rankings. |
+| Rainbow family | max-first direct/log/logit/nearest interpolation | 100 single + 100 basket configurations | 0.322% | 0.074% | Smooth family-level generic pipeline case. |
+| YieldSeeker family | max-first direct/log/logit/nearest interpolation | 100 single + 100 basket configurations | 0.071% | 0.010% | Coupon mapping remains very smooth in the tested scale feature. |
+| Himalayan family | max-first direct/log/logit/nearest interpolation | 100 single + 100 basket configurations | 0.641% | 0.123% | Dynamic basket and period aggregation covered. |
+| Lookback family | transition-enriched direct/log/logit/nearest interpolation | 100 single + 100 basket configurations | 2.434% | 0.064% | Extra train nodes near lookback strike transitions. |
+| Barrier generic family | transition-enriched direct/log/logit/nearest interpolation | 100 single + 100 basket configurations | 5.864% | 1.201% | Barrier cash/digital cases need denser transition nodes and 32,768 paths. |
+| Binary family | transition-enriched direct/log/logit/nearest interpolation | 100 single + 100 basket configurations | 7.270% | 1.668% | Range/double digitals need 131,072 paths to control MC granularity. |
 | Autocallable | Akima/PCHIP log-value interpolation | 5 autocallable cases, 4 observation dates | 0.123% | 0.051% | Single spot state conditional on no prior autocall. |
 | Random payoff | Akima log-value interpolation | 8 random payoffs, 3 market regimes, 4 times | 0.658% | 0.037% | PCHIP also strong; Chebyshev overfits nonsmooth random payoffs. |
 
