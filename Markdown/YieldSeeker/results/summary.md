@@ -16,12 +16,13 @@ contains at least 100 single-underlying and 100 basket configurations for `Yield
 - basket configurations: `100`
 - train states per configuration: `121` common spot-scale states
 - validation states per configuration: `61` shifted spot-scale states
-- path ratios per state label: `16,384` low-discrepancy antithetic paths
-- validation reuses the same Sobol path-ratio stream at shifted scale states
-  to isolate proxy interpolation error from Monte Carlo sampling noise
-- proxy candidates: direct/log linear interpolation and direct/log PCHIP interpolation
+- train paths per state label: `16,384` low-discrepancy antithetic paths
+- benchmark paths per validation state: `16,384` independent low-discrepancy antithetic paths
+- validation uses a separate path-ratio stream at shifted scale states
+  so the reported error includes out-of-sample Monte Carlo benchmark noise
+- proxy candidates: direct/log/logit linear, direct/log/logit PCHIP, and nearest interpolation
 - selected proxy: lower validation max/p99 error candidate
-- elapsed seconds: `126.6`
+- elapsed seconds: `196.1`
 
 ## Accuracy Summary
 
@@ -31,8 +32,8 @@ contains at least 100 single-underlying and 100 basket configurations for `Yield
 
 | Side | Cases | Worst Max % Error | Avg P99 % Error | P95 P99 % Error | Avg MAE | PASS | WATCH | REVIEW |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| single | 100 | 0.071% | 0.011% | 0.035% | 0.002119 | 100 | 0 | 0 |
-| basket | 100 | 0.069% | 0.010% | 0.024% | 0.001925 | 100 | 0 | 0 |
+| single | 100 | 0.229% | 0.047% | 0.112% | 0.012904 | 100 | 0 | 0 |
+| basket | 100 | 0.559% | 0.107% | 0.337% | 0.030147 | 100 | 0 | 0 |
 
 ## Subtype Coverage
 
@@ -41,27 +42,27 @@ contains at least 100 single-underlying and 100 basket configurations for `Yield
 - rankings: `weighted_basket`
 - aggregations: `sum`
 - payoffs: `linear`
-- proxy methods selected: `linear, log_linear, log_pchip, pchip`
+- proxy methods selected: `linear, log_linear, logit_linear`
 
 ## Worst Cases
 
 | Case | Side | Method | Max % Error | P99 % Error | MAE | Status |
 |---|---|---|---:|---:|---:|---|
-| yield_seeker_1_memory_True_-0.15_monthly_high | single | log_pchip | 0.071% | 0.055% | 0.009543 | PASS |
-| yield_seeker_4_memory_True_-0.15_monthly_high | basket | linear | 0.069% | 0.055% | 0.012122 | PASS |
-| yield_seeker_1_memory_True_-0.05_monthly_steep | single | log_linear | 0.065% | 0.063% | 0.015134 | PASS |
-| yield_seeker_4_memory_True_0.0_monthly_base | basket | linear | 0.050% | 0.050% | 0.009242 | PASS |
-| yield_seeker_1_memory_False_0.05_monthly_defensive | single | log_linear | 0.048% | 0.034% | 0.005244 | PASS |
-| yield_seeker_1_memory_True_0.0_monthly_base | single | pchip | 0.048% | 0.047% | 0.008397 | PASS |
-| yield_seeker_1_memory_False_0.05_even_months_steep | single | log_pchip | 0.046% | 0.035% | 0.005682 | PASS |
-| yield_seeker_4_memory_True_-0.05_monthly_steep | basket | log_pchip | 0.044% | 0.043% | 0.010235 | PASS |
-| yield_seeker_1_memory_True_0.15_quarterly_steep | single | log_linear | 0.041% | 0.035% | 0.006113 | PASS |
-| yield_seeker_1_memory_False_-0.05_even_months_high | single | log_linear | 0.040% | 0.029% | 0.005761 | PASS |
-| yield_seeker_1_memory_False_-0.05_monthly_base | single | log_linear | 0.039% | 0.034% | 0.007244 | PASS |
-| yield_seeker_1_memory_True_0.1_monthly_defensive | single | linear | 0.036% | 0.035% | 0.006046 | PASS |
-| yield_seeker_4_memory_False_-0.05_monthly_base | basket | linear | 0.035% | 0.031% | 0.008614 | PASS |
-| yield_seeker_4_memory_True_0.05_quarterly_high | basket | pchip | 0.033% | 0.023% | 0.004397 | PASS |
-| yield_seeker_4_memory_True_0.0_even_months_base | basket | pchip | 0.033% | 0.023% | 0.004399 | PASS |
+| yield_seeker_4_memory_True_-0.05_monthly_steep | basket | logit_linear | 0.559% | 0.526% | 0.109630 | PASS |
+| yield_seeker_4_memory_False_-0.05_monthly_base | basket | logit_linear | 0.543% | 0.519% | 0.128062 | PASS |
+| yield_seeker_4_memory_True_-0.15_monthly_high | basket | logit_linear | 0.455% | 0.430% | 0.085303 | PASS |
+| yield_seeker_4_memory_False_0.05_even_months_steep | basket | logit_linear | 0.416% | 0.401% | 0.108031 | PASS |
+| yield_seeker_4_memory_False_0.05_monthly_defensive | basket | logit_linear | 0.375% | 0.373% | 0.089686 | PASS |
+| yield_seeker_4_memory_False_-0.05_even_months_high | basket | logit_linear | 0.347% | 0.335% | 0.089294 | PASS |
+| yield_seeker_4_memory_True_0.0_monthly_base | basket | logit_linear | 0.298% | 0.284% | 0.064707 | PASS |
+| yield_seeker_4_memory_False_0.1_quarterly_steep | basket | logit_linear | 0.244% | 0.241% | 0.069417 | PASS |
+| yield_seeker_4_actual_return_False_-0.05_monthly_steep | basket | logit_linear | 0.242% | 0.232% | 0.085185 | PASS |
+| yield_seeker_4_memory_True_0.1_monthly_defensive | basket | logit_linear | 0.242% | 0.214% | 0.046076 | PASS |
+| yield_seeker_4_memory_False_0.1_even_months_base | basket | logit_linear | 0.234% | 0.227% | 0.062322 | PASS |
+| yield_seeker_4_high_low_False_0.0_monthly_steep | basket | logit_linear | 0.232% | 0.230% | 0.087997 | PASS |
+| yield_seeker_1_memory_True_-0.05_monthly_steep | single | logit_linear | 0.229% | 0.217% | 0.053512 | PASS |
+| yield_seeker_4_memory_False_0.0_quarterly_high | basket | logit_linear | 0.212% | 0.211% | 0.058282 | PASS |
+| yield_seeker_4_memory_False_-0.15_late_steep | basket | logit_linear | 0.208% | 0.202% | 0.062415 | PASS |
 
 ## Files
 

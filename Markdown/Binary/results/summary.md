@@ -16,23 +16,24 @@ contains at least 100 single-underlying and 100 basket configurations for `Binar
 - basket configurations: `100`
 - train states per configuration: `183` common spot-scale states
 - validation states per configuration: `61` shifted spot-scale states
-- path ratios per state label: `131,072` low-discrepancy antithetic paths
-- validation reuses the same Sobol path-ratio stream at shifted scale states
-  to isolate proxy interpolation error from Monte Carlo sampling noise
+- train paths per state label: `131,072` low-discrepancy antithetic paths
+- benchmark paths per validation state: `131,072` independent low-discrepancy antithetic paths
+- validation uses a separate path-ratio stream at shifted scale states
+  so the reported error includes out-of-sample Monte Carlo benchmark noise
 - proxy candidates: direct/log/logit linear, direct/log/logit PCHIP, and nearest interpolation
 - selected proxy: lower validation max/p99 error candidate
-- elapsed seconds: `1522.3`
+- elapsed seconds: `1185.8`
 
 ## Accuracy Summary
 
-- PASS: `199`
-- WATCH: `1`
-- REVIEW: `0`
+- PASS: `52`
+- WATCH: `34`
+- REVIEW: `114`
 
 | Side | Cases | Worst Max % Error | Avg P99 % Error | P95 P99 % Error | Avg MAE | PASS | WATCH | REVIEW |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| single | 100 | 7.270% | 1.642% | 3.675% | 0.007062 | 99 | 1 | 0 |
-| basket | 100 | 5.772% | 1.693% | 3.833% | 0.007676 | 100 | 0 | 0 |
+| single | 100 | 31.090% | 11.127% | 23.723% | 0.043628 | 26 | 21 | 53 |
+| basket | 100 | 39.927% | 12.327% | 28.223% | 0.052140 | 26 | 13 | 61 |
 
 ## Subtype Coverage
 
@@ -41,27 +42,27 @@ contains at least 100 single-underlying and 100 basket configurations for `Binar
 - rankings: `order_statistic, weighted_basket`
 - aggregations: `sum`
 - payoffs: `linear`
-- proxy methods selected: `linear, log_linear, log_pchip, logit_linear, logit_pchip, pchip`
+- proxy methods selected: `linear, log_linear, log_pchip, nearest, pchip`
 
 ## Worst Cases
 
 | Case | Side | Method | Max % Error | P99 % Error | MAE | Status |
 |---|---|---|---:|---:|---:|---|
-| binary_1_avg_quarter_unit_100_cash_or_nothing_0.15_0.0_0.25_up_weighted | single | log_linear | 7.270% | 4.645% | 0.006545 | PASS |
-| binary_4_spot_t6_relative_double_digital_-0.15_0.0_0.25_up_middle | basket | log_linear | 5.772% | 4.054% | 0.011353 | PASS |
-| binary_1_avg_quarter_notional_100_range_digital_-0.08_-0.08_0.18_down_weighted | single | pchip | 5.543% | 5.473% | 0.009257 | WATCH |
-| binary_1_geo_full_relative_double_digital_0.15_-0.08_0.18_down_weighted | single | linear | 5.245% | 3.631% | 0.012666 | PASS |
-| binary_4_geo_full_relative_double_digital_0.15_-0.08_0.18_down_weighted | basket | linear | 4.930% | 4.570% | 0.013689 | PASS |
-| binary_4_avg_front_unit_100_double_digital_-0.08_0.0_0.25_up_middle | basket | linear | 4.823% | 3.211% | 0.012291 | PASS |
-| binary_4_spot_t6_unit_100_asset_or_nothing_0.0_-0.15_0.15_up_weighted | basket | log_linear | 4.534% | 3.964% | 0.006320 | PASS |
-| binary_4_avg_front_unit_100_asset_or_nothing_0.08_-0.08_0.18_down_weighted | basket | linear | 4.478% | 2.993% | 0.008464 | PASS |
-| binary_4_avg_front_weighted_relative_cash_or_nothing_0.15_-0.08_0.18_down_weighted | basket | linear | 4.375% | 3.011% | 0.006891 | PASS |
-| binary_4_avg_front_weighted_relative_range_digital_-0.08_-0.15_0.15_up_weighted | basket | linear | 4.375% | 3.638% | 0.016806 | PASS |
-| binary_4_tail_6_relative_cash_or_nothing_-0.08_-0.08_0.18_down_weighted | basket | logit_linear | 4.300% | 4.083% | 0.005569 | PASS |
-| binary_4_geo_full_notional_100_double_digital_0.15_-0.15_0.15_down_middle | basket | pchip | 4.198% | 3.740% | 0.012883 | PASS |
-| binary_1_avg_back_weighted_unit_100_double_digital_0.15_0.0_0.25_up_weighted | single | logit_pchip | 4.176% | 3.883% | 0.011265 | PASS |
-| binary_4_geo_full_unit_100_double_digital_0.15_-0.15_0.15_up_weighted | basket | logit_linear | 4.163% | 4.014% | 0.009820 | PASS |
-| binary_4_avg_front_relative_cash_or_nothing_-0.15_0.0_0.25_up_middle | basket | linear | 3.966% | 3.684% | 0.006709 | PASS |
+| binary_4_avg_quarter_relative_asset_or_nothing_-0.15_-0.15_0.15_down_middle | basket | pchip | 39.927% | 34.769% | 0.037455 | REVIEW |
+| binary_4_tail_6_notional_100_cash_or_nothing_-0.08_-0.15_0.15_down_middle | basket | nearest | 38.356% | 31.604% | 0.209417 | REVIEW |
+| binary_4_avg_full_relative_range_digital_0.08_-0.15_0.15_down_middle | basket | linear | 36.455% | 30.874% | 0.049600 | REVIEW |
+| binary_4_avg_back_weighted_unit_100_cash_or_nothing_0.08_-0.15_0.15_down_middle | basket | pchip | 35.482% | 33.582% | 0.043725 | REVIEW |
+| binary_1_avg_front_relative_asset_or_nothing_0.15_-0.15_0.15_up_weighted | single | nearest | 31.090% | 24.776% | 0.282732 | REVIEW |
+| binary_4_avg_full_unit_100_range_digital_0.0_0.0_0.25_up_middle | basket | linear | 31.019% | 30.696% | 0.049550 | REVIEW |
+| binary_1_avg_quarter_relative_range_digital_-0.08_0.0_0.25_up_weighted | single | linear | 30.379% | 27.060% | 0.038686 | REVIEW |
+| binary_4_geo_full_notional_100_cash_or_nothing_0.0_0.0_0.25_up_middle | basket | linear | 29.995% | 28.093% | 0.031856 | REVIEW |
+| binary_1_avg_quarter_unit_100_cash_or_nothing_0.15_0.0_0.25_up_weighted | single | pchip | 28.688% | 25.239% | 0.021590 | REVIEW |
+| binary_1_avg_quarter_notional_100_range_digital_-0.08_-0.08_0.18_down_weighted | single | linear | 28.627% | 27.989% | 0.039868 | REVIEW |
+| binary_1_avg_full_relative_asset_or_nothing_-0.08_0.0_0.25_up_weighted | single | linear | 28.079% | 20.271% | 0.017518 | REVIEW |
+| binary_4_avg_front_weighted_notional_100_cash_or_nothing_0.15_-0.15_0.15_down_middle | basket | linear | 27.615% | 21.354% | 0.034409 | REVIEW |
+| binary_4_avg_full_relative_double_digital_-0.15_-0.15_0.15_up_weighted | basket | linear | 27.567% | 20.478% | 0.032839 | REVIEW |
+| binary_4_avg_full_unit_100_asset_or_nothing_-0.08_-0.15_0.15_down_middle | basket | linear | 26.994% | 16.531% | 0.026706 | REVIEW |
+| binary_4_avg_quarter_unit_100_cash_or_nothing_0.15_0.0_0.25_up_middle | basket | linear | 26.811% | 20.770% | 0.038627 | REVIEW |
 
 ## Files
 

@@ -75,12 +75,20 @@ def train_proxy(params):
         continuation_proxy = PchipInterpolator(
             log_spots, continuation, extrapolate=True
         )
+        log_low = float(log_spots[0])
+        log_high = float(log_spots[-1])
 
-        def current_value(new_spot, continuation_proxy=continuation_proxy):
+        def current_value(
+            new_spot,
+            continuation_proxy=continuation_proxy,
+            log_low=log_low,
+            log_high=log_high,
+        ):
+            query = np.clip(np.log(np.maximum(new_spot, 1e-12)), log_low, log_high)
             return np.maximum(
                 intrinsic(new_spot, params),
                 np.maximum(
-                    continuation_proxy(np.log(np.maximum(new_spot, 1e-12))),
+                    continuation_proxy(query),
                     0.0,
                 ),
             )

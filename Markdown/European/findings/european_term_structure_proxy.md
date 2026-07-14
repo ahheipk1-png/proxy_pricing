@@ -32,7 +32,7 @@ where `effective volatility = sqrt(V / T)`.
 - MC labels: shifted one-dimensional Sobol terminal-normal draws with likelihood-ratio correction
 - benchmark: generalized Black-Scholes with deterministic term structures
 - shifted Sobol paths per state: `2,048`
-- elapsed seconds: `4.8`
+- elapsed seconds: `7.2`
 
 ## MC Label Quality
 

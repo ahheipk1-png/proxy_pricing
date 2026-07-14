@@ -1265,8 +1265,8 @@ def run_proxy_study(
     products = balanced_product_subset(build_products(asset_count), product_limit)
     train_scales = chebyshev_scales(train_state_count)
     test_scales = validation_scales(validation_state_count)
+    train_paths = simulate_base_paths(market, market.train_paths, market.seed + 101)
     benchmark_paths = simulate_base_paths(market, market.benchmark_paths, market.seed + 909)
-    train_paths = benchmark_paths
     rows = []
     detail_rows = []
     for case_id, product in enumerate(products, start=1):
@@ -1342,13 +1342,18 @@ def run_family_proxy_study(
             build_family_products(family, asset_count, expanded=True),
             case_count_per_asset,
         )
-        base_paths = simulate_base_paths(market, market.benchmark_paths, market.seed + 909 + asset_count)
+        train_paths = simulate_base_paths(
+            market, market.train_paths, market.seed + 101 + asset_count
+        )
+        benchmark_paths = simulate_base_paths(
+            market, market.benchmark_paths, market.seed + 909 + asset_count
+        )
         for case_index, product in enumerate(products, start=1):
             method, metrics, train_values, truth, prediction = run_case(
                 product,
                 market,
-                base_paths,
-                base_paths,
+                train_paths,
+                benchmark_paths,
                 train_scales,
                 test_scales,
                 scale_batch,
@@ -1494,7 +1499,7 @@ def write_outputs(rows, detail_rows, output_dir, markdown_dir, label, elapsed):
         f"- train states per configuration: `{rows[0]['train_states']}` common spot-scale states",
         f"- validation states per configuration: `{rows[0]['validation_states']}` shifted spot-scale states",
         f"- train paths per state label: `{rows[0]['train_paths']:,}` low-discrepancy antithetic paths",
-        f"- path ratios per validation state: `{rows[0]['benchmark_paths']:,}` low-discrepancy antithetic paths",
+        f"- benchmark paths per validation state: `{rows[0]['benchmark_paths']:,}` independent low-discrepancy antithetic paths",
         "- proxy candidates: direct/log/logit linear, direct/log/logit PCHIP, and nearest interpolation",
         "- selected proxy: lower validation max/p99 error candidate",
         f"- elapsed seconds: `{elapsed:.1f}`",
@@ -1612,9 +1617,10 @@ def write_family_outputs(family, rows, detail_rows, output_dir, markdown_dir, el
         f"- basket configurations: `{sum(row['side'] == 'basket' for row in rows)}`",
         f"- train states per configuration: `{rows[0]['train_states']}` common spot-scale states",
         f"- validation states per configuration: `{rows[0]['validation_states']}` shifted spot-scale states",
-        f"- path ratios per state label: `{rows[0]['train_paths']:,}` low-discrepancy antithetic paths",
-        "- validation reuses the same Sobol path-ratio stream at shifted scale states",
-        "  to isolate proxy interpolation error from Monte Carlo sampling noise",
+        f"- train paths per state label: `{rows[0]['train_paths']:,}` low-discrepancy antithetic paths",
+        f"- benchmark paths per validation state: `{rows[0]['benchmark_paths']:,}` independent low-discrepancy antithetic paths",
+        "- validation uses a separate path-ratio stream at shifted scale states",
+        "  so the reported error includes out-of-sample Monte Carlo benchmark noise",
         "- proxy candidates: direct/log/logit linear, direct/log/logit PCHIP, and nearest interpolation",
         "- selected proxy: lower validation max/p99 error candidate",
         f"- elapsed seconds: `{elapsed:.1f}`",

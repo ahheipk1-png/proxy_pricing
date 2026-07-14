@@ -3,6 +3,17 @@ __pycache__/
 tmp/
 tools/tectonic/
 OneDimensionalFitExperiment/results/quick/
+AmericanOptExperiment/default_run/
+AsianOptExperiment/default_run/
+AutocallableOptExperiment/results/
+BarrierOptExperiment/results/
+BasketAsianOptExperiment/results/
+BasketCliquetOptExperiment/results/
+BermudanOptExperiment/results/
+CliquetOptExperiment/default_run/
+EuroOptExperiment/default_run/
+RandomOptionOptExperiment/results/
+SLVCliquetOptExperiment/default_run/
 SingleExoticOptExperiment/results/
 BasketExoticOptExperiment/results/
 RainbowOptExperiment/results/
